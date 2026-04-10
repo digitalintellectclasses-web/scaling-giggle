@@ -1,3 +1,0 @@
-module.exports=[73422,(a,b,c)=>{let{createClientModuleProxy:d}=a.r(34798);a.n(d("[project]/Desktop/MY Finance Software/agency-dashboard/node_modules/next/dist/client/components/builtin/global-error.js <module evaluation>"))},62546,(a,b,c)=>{let{createClientModuleProxy:d}=a.r(34798);a.n(d("[project]/Desktop/MY Finance Software/agency-dashboard/node_modules/next/dist/client/components/builtin/global-error.js"))},25906,a=>{"use strict";a.i(73422);var b=a.i(62546);a.n(b)},45503,a=>{a.n(a.i(25906))}];
-
-//# sourceMappingURL=0.sk_next_dist_client_components_builtin_global-error_0qs.mcw.js.map

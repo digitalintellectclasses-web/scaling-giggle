@@ -16,6 +16,19 @@
 # next.js
 /.next/
 /out/
+/server/
+/static/
+/build/
+/cache/
+/dev/
+/diagnostics/
+/types/
+*-manifest.json
+BUILD_ID
+export-marker.json
+trace
+trace-build
+turbopack
 
 # production
 /build
