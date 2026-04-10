@@ -1,0 +1,3 @@
+module.exports=[26769,a=>{"use strict";let b=(0,a.i(73144).default)("indian-rupee",[["path",{d:"M6 3h12",key:"ggurg9"}],["path",{d:"M6 8h12",key:"6g4wlu"}],["path",{d:"m6 13 8.5 8",key:"u1kupk"}],["path",{d:"M6 13h3",key:"wdp6ag"}],["path",{d:"M9 13c6.667 0 6.667-10 0-10",key:"1nkvk2"}]]);a.s(["IndianRupee",0,b],26769)},51609,a=>{"use strict";let b=(0,a.i(73144).default)("user-plus",[["path",{d:"M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2",key:"1yyitq"}],["circle",{cx:"9",cy:"7",r:"4",key:"nufk8"}],["line",{x1:"19",x2:"19",y1:"8",y2:"14",key:"1bvyxn"}],["line",{x1:"22",x2:"16",y1:"11",y2:"11",key:"1shjgl"}]]);a.s(["UserPlus",0,b],51609)}];
+
+//# sourceMappingURL=0.sk_lucide-react_dist_esm_icons_0o-xi37._.js.map
