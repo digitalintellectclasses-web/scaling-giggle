@@ -1,32 +1,41 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { 
-  onAuthStateChanged, 
-  signInWithEmailAndPassword, 
-  signOut, 
-  User as FirebaseUser,
-  getIdTokenResult
-} from 'firebase/auth';
-import { auth, db } from '../lib/firebase';
-import { doc, getDoc, setDoc, onSnapshot, collection, serverTimestamp } from 'firebase/firestore';
 
 export type UserRole = 'admin' | 'employee';
 
 export type AppUser = {
   id: string;
   username: string;
+  email?: string; // stored in plain-text in localStorage (no backend)
+  password: string; // stored in plain-text in localStorage (no backend)
   role: UserRole;
   displayName: string;
-  email: string;
 };
+
+const SEED_USERS: AppUser[] = [
+  {
+    id: 'usr_admin',
+    username: 'PPSOLAR',
+    password: 'PPSOLAR2026',
+    role: 'admin',
+    displayName: 'Admin (PP Solar)',
+  },
+  {
+    id: 'usr_priyanka',
+    username: 'PRIYANKA',
+    password: 'PriyankaIvory2026',
+    role: 'employee',
+    displayName: 'Priyanka',
+  },
+];
 
 type AuthContextType = {
   users: AppUser[];
   currentUser: AppUser | null;
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => Promise<void>;
-  createEmployee: (username: string, email: string, password: string, displayName: string) => Promise<void>;
+  login: (username: string, password: string) => boolean;
+  logout: () => void;
+  createEmployee: (username: string, email: string, password: string, displayName: string) => void;
   isAuthenticated: boolean;
   isLoaded: boolean;
 };
@@ -34,80 +43,66 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [users, setUsers] = useState<AppUser[]>(SEED_USERS);
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
-  const [users, setUsers] = useState<AppUser[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
-        if (userDoc.exists()) {
-            const userData = userDoc.data();
-            setCurrentUser({
-                id: user.uid,
-                username: userData.username || user.email?.split('@')[0],
-                role: userData.role as UserRole,
-                displayName: userData.displayName || user.displayName || 'User',
-                email: user.email || '',
-            });
-        }
-      } else {
-        setCurrentUser(null);
-      }
-      setIsLoaded(true);
-    });
+    // Load any extra users created by admin (seed users always included)
+    const savedExtraUsers = localStorage.getItem('ag_extra_users');
+    const extraUsers: AppUser[] = savedExtraUsers ? JSON.parse(savedExtraUsers) : [];
 
-    // Subscriptions for user list (only if admin)
-    // For simplicity, we'll listen to the users collection if any user is logged in for now, 
-    // but in a production app, security rules should restrict this to admins.
-    const unsubscribeUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
-        setUsers(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as AppUser)));
-    });
+    // Merge seed + extra, seed takes precedence by id
+    const seedIds = new Set(SEED_USERS.map(u => u.id));
+    const merged = [...SEED_USERS, ...extraUsers.filter(u => !seedIds.has(u.id))];
+    setUsers(merged);
 
-    return () => {
-        unsubscribeAuth();
-        unsubscribeUsers();
-    };
+    // Restore session
+    const savedSession = localStorage.getItem('ag_session');
+    if (savedSession) {
+      const sessionUser = JSON.parse(savedSession) as AppUser;
+      // Re-validate from merged list (password may have changed)
+      const fresh = merged.find(u => u.id === sessionUser.id);
+      if (fresh) setCurrentUser(fresh);
+    }
+    setIsLoaded(true);
   }, []);
 
-  const login = async (email: string, password: string) => {
-    try {
-      await signInWithEmailAndPassword(auth, email, password);
-    } catch (error: any) {
-      console.error("Login failed:", error.message);
-      throw error;
+  const login = (username: string, password: string): boolean => {
+    const user = users.find(
+      u => u.username.toLowerCase() === username.toLowerCase() && u.password === password
+    );
+    if (user) {
+      setCurrentUser(user);
+      localStorage.setItem('ag_session', JSON.stringify(user));
+      return true;
     }
+    return false;
   };
 
-  const logout = async () => {
-    try {
-      await signOut(auth);
-      localStorage.setItem('ag_isAdmin', 'false');
-    } catch (error: any) {
-      console.error("Logout failed:", error.message);
-      throw error;
-    }
+  const logout = () => {
+    setCurrentUser(null);
+    localStorage.removeItem('ag_session');
+    // Also clear admin flag from FinanceContext
+    localStorage.setItem('ag_isAdmin', 'false');
   };
 
-  const createEmployee = async (username: string, email: string, password: string, displayName: string) => {
-    // Note: This often requires Firebase Admin SDK or a Cloud Function to create users without logging out
-    // But for a simple implementation, we can create the profile in Firestore 
-    // and the user will have to sign up separately OR use an admin-only creation flow.
-    // For now, we'll assume the admin is adding the profile to Firestore.
-    try {
-        const userId = `usr_${Date.now()}`; // Placeholder until real Auth integration
-        await setDoc(doc(db, 'users', userId), {
-            username: username.toUpperCase(),
-            displayName,
-            role: 'employee',
-            email: email.toLowerCase(),
-            createdAt: serverTimestamp()
-        });
-    } catch (error: any) {
-        console.error("Failed to create employee:", error.message);
-        throw error;
-    }
+  const createEmployee = (username: string, email: string, password: string, displayName: string) => {
+    const newUser: AppUser = {
+      id: `usr_${crypto.randomUUID()}`,
+      username,
+      email,
+      password,
+      role: 'employee',
+      displayName,
+    };
+    setUsers(prev => {
+      const updated = [...prev, newUser];
+      // Persist only extra (non-seed) users
+      const seedIds = new Set(SEED_USERS.map(u => u.id));
+      localStorage.setItem('ag_extra_users', JSON.stringify(updated.filter(u => !seedIds.has(u.id))));
+      return updated;
+    });
   };
 
   return (

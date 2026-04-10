@@ -6,7 +6,7 @@ import { Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 
 export function LoginPage() {
   const { login } = useAuth();
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
@@ -18,7 +18,8 @@ export function LoginPage() {
     setLoading(true);
 
     try {
-      await login(email.trim(), password);
+      const success = login(username.trim(), password);
+      if (!success) throw new Error('Invalid username or password.');
     } catch (err: any) {
       setError(err.message || 'Invalid credentials. Please try again.');
     } finally {
@@ -50,16 +51,16 @@ export function LoginPage() {
             
             <div>
               <label className="block text-sm font-medium text-zinc-400 mb-1.5">
-                Email Address
+                Username
               </label>
               <input
-                type="email"
+                type="text"
                 required
-                autoComplete="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                className="block w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white placeholder:text-zinc-600 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
-                placeholder="admin@ivory.agency"
+                autoComplete="username"
+                value={username}
+                onChange={e => setUsername(e.target.value)}
+                className="block w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white placeholder:text-zinc-600 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all uppercase"
+                placeholder="e.g. PPSOLAR"
               />
             </div>
 
