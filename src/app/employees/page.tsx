@@ -45,10 +45,10 @@ export default function EmployeesPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleCreateEmployee = (e: React.FormEvent) => {
+  const handleCreateEmployee = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!empUsername || !empPassword || !empEmail) return;
-    createEmployee(empUsername.trim(), empEmail.trim().toLowerCase(), empPassword, empDisplayName.trim());
+    await createEmployee(empUsername.trim(), empEmail.trim().toLowerCase(), empPassword, empDisplayName.trim());
     setCreateSuccess(`✓ Employee "${empDisplayName}" created with ID: ${empUsername}`);
     setEmpDisplayName(''); setEmpUsername(''); setEmpEmail(''); setEmpPassword(''); setGeneratedId('');
     setTimeout(() => setCreateSuccess(''), 4000);
@@ -68,11 +68,11 @@ export default function EmployeesPage() {
   const [salNote, setSalNote] = useState('');
   const [salSuccess, setSalSuccess] = useState('');
 
-  const handleAddSalary = (e: React.FormEvent) => {
+  const handleAddSalary = async (e: React.FormEvent) => {
     e.preventDefault();
     const emp = users.find(u => u.username === salEmpId);
     if (!emp || !salAmount) return;
-    addSalaryPayment({
+    await addSalaryPayment({
       employeeUserId: emp.username,
       employeeName: emp.displayName,
       amount: Number(salAmount),
@@ -341,7 +341,7 @@ export default function EmployeesPage() {
                 </div>
                 <div className="flex items-center gap-3">
                   <p className="text-lg font-bold text-emerald-400">{formatINR(sp.amount)}</p>
-                  <button onClick={() => deleteSalaryPayment(sp.id)}
+                  <button onClick={async () => await deleteSalaryPayment(sp.id)}
                     className="p-2 text-zinc-600 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all opacity-0 group-hover:opacity-100">
                     <Trash2 className="h-4 w-4" />
                   </button>

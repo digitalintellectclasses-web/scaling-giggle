@@ -185,7 +185,7 @@ export default function ClientManager() {
                         </td>
                         <td className="px-6 py-4 text-right">
                           <button 
-                             onClick={() => deleteClient(client.id)}
+                             onClick={async () => await deleteClient(client.id)}
                              className="p-2 text-zinc-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
                            >
                              <Trash2 className="h-4 w-4" />

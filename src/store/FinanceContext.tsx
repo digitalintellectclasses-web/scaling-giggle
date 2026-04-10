@@ -1,6 +1,17 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { db } from '@/lib/firebase';
+import { 
+  collection, 
+  onSnapshot, 
+  doc, 
+  setDoc, 
+  deleteDoc, 
+  query, 
+  orderBy,
+  writeBatch
+} from 'firebase/firestore';
 
 export type Transaction = {
   id: string;
@@ -48,13 +59,13 @@ type FinanceContextType = {
   equities: PartnerEquity[];
   salaryPayments: SalaryPayment[];
   isAdmin: boolean;
-  addTransaction: (tx: Omit<Transaction, 'id'>) => void;
-  addClient: (client: Omit<Client, 'id'>) => void;
-  addEquity: (equity: Omit<PartnerEquity, 'id'>) => void;
-  addSalaryPayment: (sp: Omit<SalaryPayment, 'id'>) => void;
-  deleteSalaryPayment: (id: string) => void;
-  deleteTransaction: (id: string) => void;
-  deleteClient: (id: string) => void;
+  addTransaction: (tx: Omit<Transaction, 'id'>) => Promise<void>;
+  addClient: (client: Omit<Client, 'id'>) => Promise<void>;
+  addEquity: (equity: Omit<PartnerEquity, 'id'>) => Promise<void>;
+  addSalaryPayment: (sp: Omit<SalaryPayment, 'id'>) => Promise<void>;
+  deleteSalaryPayment: (id: string) => Promise<void>;
+  deleteTransaction: (id: string) => Promise<void>;
+  deleteClient: (id: string) => Promise<void>;
   setIsAdmin: (val: boolean) => void;
   isLoaded: boolean;
 };
@@ -69,56 +80,90 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Load from local storage
+  // 1. Real-time Subscription to collections
   useEffect(() => {
-    const savedTransactions = localStorage.getItem('ag_transactions');
-    const savedClients = localStorage.getItem('ag_clients');
-    const savedEquities = localStorage.getItem('ag_equities');
-    const savedSalaries = localStorage.getItem('ag_salaries');
+    const unsubTx = onSnapshot(query(collection(db, 'transactions'), orderBy('date', 'desc')), (snapshot) => {
+      setTransactions(snapshot.docs.map(doc => ({ ...doc.data() as Transaction, id: doc.id })));
+    });
 
-    if (savedTransactions) setTransactions(JSON.parse(savedTransactions));
-    if (savedClients) setClients(JSON.parse(savedClients));
-    if (savedEquities) setEquities(JSON.parse(savedEquities));
-    if (savedSalaries) setSalaryPayments(JSON.parse(savedSalaries));
-    
+    const unsubClients = onSnapshot(collection(db, 'clients'), (snapshot) => {
+      setClients(snapshot.docs.map(doc => ({ ...doc.data() as Client, id: doc.id })));
+    });
+
+    const unsubEquities = onSnapshot(query(collection(db, 'equities'), orderBy('date', 'desc')), (snapshot) => {
+      setEquities(snapshot.docs.map(doc => ({ ...doc.data() as PartnerEquity, id: doc.id })));
+    });
+
+    const unsubSalaries = onSnapshot(query(collection(db, 'salaries'), orderBy('date', 'desc')), (snapshot) => {
+      setSalaryPayments(snapshot.docs.map(doc => ({ ...doc.data() as SalaryPayment, id: doc.id })));
+    });
+
     setIsLoaded(true);
+    return () => {
+      unsubTx();
+      unsubClients();
+      unsubEquities();
+      unsubSalaries();
+    };
   }, []);
 
-  // Save to local storage
+  // 2. Migration Logic: First time load from LocalStorage and upload to Cloud
   useEffect(() => {
-    if (!isLoaded) return;
-    localStorage.setItem('ag_transactions', JSON.stringify(transactions));
-    localStorage.setItem('ag_clients', JSON.stringify(clients));
-    localStorage.setItem('ag_equities', JSON.stringify(equities));
-    localStorage.setItem('ag_salaries', JSON.stringify(salaryPayments));
-  }, [transactions, clients, equities, salaryPayments, isLoaded]);
+    const migrate = async () => {
+      const localCheck = localStorage.getItem('ag_cloud_migrated');
+      if (localCheck === 'true') return;
 
-  const addTransaction = (tx: Omit<Transaction, 'id'>) => {
-    setTransactions((prev) => [...prev, { ...tx, id: crypto.randomUUID() }]);
+      const savedTx = localStorage.getItem('ag_transactions');
+      const savedClients = localStorage.getItem('ag_clients');
+      const savedEquities = localStorage.getItem('ag_equities');
+      const savedSalaries = localStorage.getItem('ag_salaries');
+
+      if (savedTx || savedClients || savedEquities || savedSalaries) {
+        const batch = writeBatch(db);
+        
+        if (savedTx) JSON.parse(savedTx).forEach((t: Transaction) => batch.set(doc(db, 'transactions', t.id), t));
+        if (savedClients) JSON.parse(savedClients).forEach((c: Client) => batch.set(doc(db, 'clients', c.id), c));
+        if (savedEquities) JSON.parse(savedEquities).forEach((e: PartnerEquity) => batch.set(doc(db, 'equities', e.id), e));
+        if (savedSalaries) JSON.parse(savedSalaries).forEach((s: SalaryPayment) => batch.set(doc(db, 'salaries', s.id), s));
+        
+        await batch.commit();
+      }
+      localStorage.setItem('ag_cloud_migrated', 'true');
+    };
+    
+    migrate();
+  }, []);
+
+  const addTransaction = async (tx: Omit<Transaction, 'id'>) => {
+    const id = crypto.randomUUID();
+    await setDoc(doc(db, 'transactions', id), { ...tx, id });
   };
 
-  const addClient = (client: Omit<Client, 'id'>) => {
-    setClients((prev) => [...prev, { ...client, id: crypto.randomUUID() }]);
+  const addClient = async (client: Omit<Client, 'id'>) => {
+    const id = crypto.randomUUID();
+    await setDoc(doc(db, 'clients', id), { ...client, id });
   };
 
-  const addEquity = (equity: Omit<PartnerEquity, 'id'>) => {
-    setEquities((prev) => [...prev, { ...equity, id: crypto.randomUUID() }]);
+  const addEquity = async (equity: Omit<PartnerEquity, 'id'>) => {
+    const id = crypto.randomUUID();
+    await setDoc(doc(db, 'equities', id), { ...equity, id });
   };
 
-  const addSalaryPayment = (sp: Omit<SalaryPayment, 'id'>) => {
-    setSalaryPayments((prev) => [...prev, { ...sp, id: crypto.randomUUID() }]);
+  const addSalaryPayment = async (sp: Omit<SalaryPayment, 'id'>) => {
+    const id = crypto.randomUUID();
+    await setDoc(doc(db, 'salaries', id), { ...sp, id });
   };
 
-  const deleteSalaryPayment = (id: string) => {
-    setSalaryPayments((prev) => prev.filter(s => s.id !== id));
+  const deleteSalaryPayment = async (id: string) => {
+    await deleteDoc(doc(db, 'salaries', id));
   };
 
-  const deleteTransaction = (id: string) => {
-    setTransactions((prev) => prev.filter(t => t.id !== id));
+  const deleteTransaction = async (id: string) => {
+    await deleteDoc(doc(db, 'transactions', id));
   };
 
-  const deleteClient = (id: string) => {
-    setClients((prev) => prev.filter(c => c.id !== id));
+  const deleteClient = async (id: string) => {
+    await deleteDoc(doc(db, 'clients', id));
   };
 
   return (
@@ -139,3 +184,4 @@ export function useFinance() {
   }
   return context;
 }
+

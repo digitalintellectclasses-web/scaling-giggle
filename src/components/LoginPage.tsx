@@ -18,7 +18,7 @@ export function LoginPage() {
     setLoading(true);
 
     try {
-      const success = login(username.trim(), password);
+      const success = await login(username.trim(), password);
       if (!success) throw new Error('Invalid username or password.');
     } catch (err: any) {
       setError(err.message || 'Invalid credentials. Please try again.');

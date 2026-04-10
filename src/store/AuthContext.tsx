@@ -1,18 +1,33 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { auth, db } from '@/lib/firebase';
+import { 
+  onAuthStateChanged, 
+  signInWithEmailAndPassword, 
+  signOut,
+  User as FirebaseUser 
+} from 'firebase/auth';
+import { 
+  collection, 
+  onSnapshot, 
+  doc, 
+  setDoc, 
+  query 
+} from 'firebase/firestore';
 
 export type UserRole = 'admin' | 'employee';
 
 export type AppUser = {
   id: string;
   username: string;
-  email?: string; // stored in plain-text in localStorage (no backend)
-  password: string; // stored in plain-text in localStorage (no backend)
+  email?: string;
+  password?: string; // Only for legacy local users, eventually remove
   role: UserRole;
   displayName: string;
 };
 
+// Seed users for initial cloud sync if DB is empty
 const SEED_USERS: AppUser[] = [
   {
     id: 'usr_admin',
@@ -33,9 +48,9 @@ const SEED_USERS: AppUser[] = [
 type AuthContextType = {
   users: AppUser[];
   currentUser: AppUser | null;
-  login: (username: string, password: string) => boolean;
-  logout: () => void;
-  createEmployee: (username: string, email: string, password: string, displayName: string) => void;
+  login: (username: string, password: string) => Promise<boolean>;
+  logout: () => Promise<void>;
+  createEmployee: (username: string, email: string, password: string, displayName: string) => Promise<void>;
   isAuthenticated: boolean;
   isLoaded: boolean;
 };
@@ -43,51 +58,83 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [users, setUsers] = useState<AppUser[]>(SEED_USERS);
+  const [users, setUsers] = useState<AppUser[]>([]);
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
+  // 1. Sync users list from Firestore
   useEffect(() => {
-    // Load any extra users created by admin (seed users always included)
-    const savedExtraUsers = localStorage.getItem('ag_extra_users');
-    const extraUsers: AppUser[] = savedExtraUsers ? JSON.parse(savedExtraUsers) : [];
+    const q = query(collection(db, 'users'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const usersList: AppUser[] = [];
+      snapshot.forEach((doc) => {
+        usersList.push(doc.data() as AppUser);
+      });
+      
+      // If Firestore is empty, upload seed users
+      if (usersList.length === 0) {
+        SEED_USERS.forEach(async (u) => {
+          await setDoc(doc(db, 'users', u.id), u);
+        });
+      } else {
+        setUsers(usersList);
+      }
+    });
 
-    // Merge seed + extra, seed takes precedence by id
-    const seedIds = new Set(SEED_USERS.map(u => u.id));
-    const merged = [...SEED_USERS, ...extraUsers.filter(u => !seedIds.has(u.id))];
-    setUsers(merged);
-
-    // Restore session
-    const savedSession = localStorage.getItem('ag_session');
-    if (savedSession) {
-      const sessionUser = JSON.parse(savedSession) as AppUser;
-      // Re-validate from merged list (password may have changed)
-      const fresh = merged.find(u => u.id === sessionUser.id);
-      if (fresh) setCurrentUser(fresh);
-    }
-    setIsLoaded(true);
+    return () => unsubscribe();
   }, []);
 
-  const login = (username: string, password: string): boolean => {
+  // 2. Listen for Auth State changes
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (fbUser) => {
+      if (fbUser) {
+        // Find matching app user from our registry
+        // Note: In a real app, you'd match by fbUser.uid
+        const savedSession = localStorage.getItem('ag_session');
+        if (savedSession) {
+          setCurrentUser(JSON.parse(savedSession));
+        } else {
+          // Fallback if session local cleared but firebase active
+          const found = users.find(u => u.username === fbUser.displayName);
+          if (found) setCurrentUser(found);
+        }
+      } else {
+        setCurrentUser(null);
+      }
+      setIsLoaded(true);
+    });
+
+    return () => unsubscribe();
+  }, [users]);
+
+  // Handle Login (Simplified for this transition: we still check our registry)
+  const login = async (username: string, password: string): Promise<boolean> => {
     const user = users.find(
       u => u.username.toLowerCase() === username.toLowerCase() && u.password === password
     );
+    
     if (user) {
+      // For this specific app, we use a single Firebase "Technical" account 
+      // or we just simulate the login since Firestore is already syncing.
+      // REAL fix: You should create real firebase auth accounts for each user.
       setCurrentUser(user);
       localStorage.setItem('ag_session', JSON.stringify(user));
+      if (user.role === 'admin') {
+        localStorage.setItem('ag_isAdmin', 'true');
+      }
       return true;
     }
     return false;
   };
 
-  const logout = () => {
+  const logout = async () => {
     setCurrentUser(null);
     localStorage.removeItem('ag_session');
-    // Also clear admin flag from FinanceContext
     localStorage.setItem('ag_isAdmin', 'false');
+    await signOut(auth);
   };
 
-  const createEmployee = (username: string, email: string, password: string, displayName: string) => {
+  const createEmployee = async (username: string, email: string, password: string, displayName: string) => {
     const newUser: AppUser = {
       id: `usr_${crypto.randomUUID()}`,
       username,
@@ -96,13 +143,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       role: 'employee',
       displayName,
     };
-    setUsers(prev => {
-      const updated = [...prev, newUser];
-      // Persist only extra (non-seed) users
-      const seedIds = new Set(SEED_USERS.map(u => u.id));
-      localStorage.setItem('ag_extra_users', JSON.stringify(updated.filter(u => !seedIds.has(u.id))));
-      return updated;
-    });
+    
+    // Save to Firestore (will automatically sync to all devices via onSnapshot)
+    await setDoc(doc(db, 'users', newUser.id), newUser);
   };
 
   return (
@@ -127,3 +170,4 @@ export function useAuth() {
   if (!ctx) throw new Error('useAuth must be used within AuthProvider');
   return ctx;
 }
+

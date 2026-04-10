@@ -23,10 +23,10 @@ export default function Dashboard() {
   const [empDisplayName, setEmpDisplayName] = useState('');
   const [empSuccess, setEmpSuccess] = useState('');
 
-  const handleCreateEmployee = (e: React.FormEvent) => {
+  const handleCreateEmployee = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      createEmployee(empUsername.trim(), '', empPassword, empDisplayName.trim());
+      await createEmployee(empUsername.trim(), '', empPassword, empDisplayName.trim());
       setEmpSuccess(`✓ Employee "${empDisplayName}" account prepared.`);
       setEmpUsername(''); setEmpPassword(''); setEmpDisplayName('');
       setTimeout(() => setEmpSuccess(''), 3000);

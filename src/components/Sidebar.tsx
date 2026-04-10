@@ -22,8 +22,8 @@ export function Sidebar() {
   const { currentUser, logout } = useAuth();
   const { isAdmin } = useFinance();
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     router.replace('/');
   };
 

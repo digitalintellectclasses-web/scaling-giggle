@@ -56,3 +56,5 @@ next-env.d.ts
 # local deploy keys
 deploy_key
 deploy_key.pub
+
+.vercel
