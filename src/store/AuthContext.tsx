@@ -5,6 +5,7 @@ import { auth, db } from '@/lib/firebase';
 import { 
   onAuthStateChanged, 
   signInWithEmailAndPassword, 
+  signInAnonymously,
   signOut,
   User as FirebaseUser 
 } from 'firebase/auth';
@@ -86,26 +87,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // 2. Listen for Auth State changes
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (fbUser) => {
-      if (fbUser) {
-        // Find matching app user from our registry
-        // Note: In a real app, you'd match by fbUser.uid
-        const savedSession = localStorage.getItem('ag_session');
-        if (savedSession) {
-          setCurrentUser(JSON.parse(savedSession));
-        } else {
-          // Fallback if session local cleared but firebase active
-          const found = users.find(u => u.username === fbUser.displayName);
-          if (found) setCurrentUser(found);
+    // 1. Immediate local session recovery (prevents UI flickering/logout on refresh)
+    const savedSession = localStorage.getItem('ag_session');
+    if (savedSession) {
+      setCurrentUser(JSON.parse(savedSession));
+    }
+
+    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
+      // 2. Ensure a Firebase Auth session is active for Firestore Cloud Sync
+      if (!fbUser) {
+        try {
+          // Using Anonymous Auth to enable data synchronization across devices
+          // without requiring manual account creation in Firebase Console.
+          await signInAnonymously(auth);
+        } catch (err: any) {
+          if (err.code === 'auth/admin-restricted-operation') {
+            console.warn("Firebase Cloud Sync: Anonymous Auth is disabled in Firebase Console. Please enable it to allow cross-device synchronization.");
+          } else {
+            console.error("Firebase Sync Authentication failed:", err);
+          }
         }
-      } else {
+      }
+      
+      // If no local session found, we are truly logged out
+      if (!localStorage.getItem('ag_session')) {
         setCurrentUser(null);
       }
+      
       setIsLoaded(true);
     });
 
     return () => unsubscribe();
-  }, [users]);
+  }, []);
 
   // Handle Login (Simplified for this transition: we still check our registry)
   const login = async (username: string, password: string): Promise<boolean> => {

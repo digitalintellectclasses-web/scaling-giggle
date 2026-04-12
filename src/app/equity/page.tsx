@@ -235,7 +235,7 @@ export default function EquityLedger() {
                      </div>
                      <div className="flex flex-col">
                        <span className="text-white font-medium">{eq.partnerId}</span>
-                       <span className="text-zinc-400 text-sm">{eq.type === 'investment' ? 'Investment' : 'Drawing'} • {format(new Date(eq.date), 'MMM dd, yyyy')}</span>
+                       <span className="text-zinc-400 text-[10px] md:text-sm">{eq.type === 'investment' ? 'Investment' : 'Drawing'} • {format(new Date(eq.date), 'MMM dd')}</span>
                      </div>
                    </div>
                    <div className={`font-semibold text-lg ${eq.type === 'investment' ? 'text-emerald-400' : 'text-zinc-100'}`}>

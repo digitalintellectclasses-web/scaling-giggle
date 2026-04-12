@@ -82,21 +82,35 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
   // 1. Real-time Subscription to collections
   useEffect(() => {
-    const unsubTx = onSnapshot(query(collection(db, 'transactions'), orderBy('date', 'desc')), (snapshot) => {
-      setTransactions(snapshot.docs.map(doc => ({ ...doc.data() as Transaction, id: doc.id })));
-    });
-
-    const unsubClients = onSnapshot(collection(db, 'clients'), (snapshot) => {
-      setClients(snapshot.docs.map(doc => ({ ...doc.data() as Client, id: doc.id })));
-    });
-
-    const unsubEquities = onSnapshot(query(collection(db, 'equities'), orderBy('date', 'desc')), (snapshot) => {
-      setEquities(snapshot.docs.map(doc => ({ ...doc.data() as PartnerEquity, id: doc.id })));
-    });
-
-    const unsubSalaries = onSnapshot(query(collection(db, 'salaries'), orderBy('date', 'desc')), (snapshot) => {
-      setSalaryPayments(snapshot.docs.map(doc => ({ ...doc.data() as SalaryPayment, id: doc.id })));
-    });
+    const unsubTx = onSnapshot(query(collection(db, 'transactions'), orderBy('date', 'desc')), 
+      (snapshot) => {
+        setTransactions(snapshot.docs.map(doc => ({ ...doc.data() as Transaction, id: doc.id })));
+      },
+      (err) => {
+        console.error("Firestore Transactions Sync Error:", err);
+      }
+    );
+  
+    const unsubClients = onSnapshot(collection(db, 'clients'), 
+      (snapshot) => {
+        setClients(snapshot.docs.map(doc => ({ ...doc.data() as Client, id: doc.id })));
+      },
+      (err) => console.error("Firestore Clients Sync Error:", err)
+    );
+  
+    const unsubEquities = onSnapshot(query(collection(db, 'equities'), orderBy('date', 'desc')), 
+      (snapshot) => {
+        setEquities(snapshot.docs.map(doc => ({ ...doc.data() as PartnerEquity, id: doc.id })));
+      },
+      (err) => console.error("Firestore Equities Sync Error:", err)
+    );
+  
+    const unsubSalaries = onSnapshot(query(collection(db, 'salaries'), orderBy('date', 'desc')), 
+      (snapshot) => {
+        setSalaryPayments(snapshot.docs.map(doc => ({ ...doc.data() as SalaryPayment, id: doc.id })));
+      },
+      (err) => console.error("Firestore Salaries Sync Error:", err)
+    );
 
     setIsLoaded(true);
     return () => {
@@ -136,7 +150,11 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
   const addTransaction = async (tx: Omit<Transaction, 'id'>) => {
     const id = crypto.randomUUID();
-    await setDoc(doc(db, 'transactions', id), { ...tx, id });
+    try {
+      await setDoc(doc(db, 'transactions', id), { ...tx, id });
+    } catch (err: any) {
+      console.error("Firestore Transaction Write Failed:", err);
+    }
   };
 
   const addClient = async (client: Omit<Client, 'id'>) => {

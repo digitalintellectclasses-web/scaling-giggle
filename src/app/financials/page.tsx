@@ -191,24 +191,24 @@ export default function FinancialTracking() {
              ) : (
                transactions.slice().reverse().map((tx) => (
                  <div key={tx.id} className="group flex items-center justify-between p-4 bg-zinc-900/50 hover:bg-zinc-800/80 border border-zinc-800 rounded-xl transition-all">
-                   <div className="flex flex-col">
-                     <span className="text-white font-medium">{tx.description}</span>
-                     <div className="text-xs text-zinc-400 flex gap-2 items-center mt-1">
-                       <span>{tx.category}</span>
-                       <span className="text-zinc-600">•</span>
-                       <span>{format(new Date(tx.date), 'MMM dd, yyyy')}</span>
-                       <span className="text-zinc-600">•</span>
-                       <span className="px-2 py-0.5 rounded-md bg-zinc-800 text-zinc-300 font-medium">By {tx.managedBy}</span>
-                       <span className="px-2 py-0.5 rounded-md bg-zinc-800 text-zinc-300 font-medium uppercase">{tx.paymentMethod}</span>
-                     </div>
-                   </div>
+                    <div className="flex flex-col min-w-0 flex-1 pr-2">
+                      <span className="text-white font-medium truncate">{tx.description}</span>
+                      <div className="text-[10px] md:text-xs text-zinc-400 flex flex-wrap gap-2 items-center mt-1">
+                        <span>{tx.category}</span>
+                        <span className="hidden md:inline text-zinc-600">•</span>
+                        <span>{format(new Date(tx.date), 'MMM dd')}</span>
+                        <span className="hidden md:inline text-zinc-600">•</span>
+                        <span className="hidden sm:inline px-2 py-0.5 rounded-md bg-zinc-800 text-zinc-300 font-medium">By {tx.managedBy}</span>
+                        <span className="hidden sm:inline px-2 py-0.5 rounded-md bg-zinc-800 text-zinc-300 font-medium uppercase">{tx.paymentMethod}</span>
+                      </div>
+                    </div>
                    <div className="flex items-center gap-4">
                      <span className={`font-semibold text-lg ${tx.type === 'income' ? 'text-emerald-400' : 'text-zinc-100'}`}>
                        {tx.type === 'expense' ? '-' : '+'}{formatINR(tx.amount)}
                      </span>
                      <button 
                        onClick={async () => await deleteTransaction(tx.id)}
-                       className="p-2 text-zinc-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                       className="p-2 text-zinc-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all md:opacity-0 md:group-hover:opacity-100"
                      >
                        <Trash2 className="h-4 w-4" />
                      </button>

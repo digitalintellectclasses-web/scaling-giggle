@@ -145,13 +145,13 @@ export default function Dashboard() {
       </div>
 
       {/* Metrics Row */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
         <div className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-6 shadow-sm relative overflow-hidden group">
           <div className="flex justify-between items-start mb-4">
             <h3 className="text-zinc-400 text-sm font-medium">Monthly Revenue</h3>
             <div className="p-2 bg-emerald-500/10 rounded-lg"><TrendingUp className="h-4 w-4 text-emerald-500" /></div>
           </div>
-          <p className="text-3xl font-bold text-white">{formatINR(totalIncome)}</p>
+          <p className="text-xl md:text-3xl font-bold text-white">{formatINR(totalIncome)}</p>
         </div>
 
         <div className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-6 shadow-sm relative overflow-hidden group">
@@ -159,7 +159,7 @@ export default function Dashboard() {
             <h3 className="text-zinc-400 text-sm font-medium">Monthly Expenses</h3>
             <div className="p-2 bg-red-500/10 rounded-lg"><TrendingUp className="h-4 w-4 text-red-500 rotate-180" /></div>
           </div>
-          <p className="text-3xl font-bold text-white">{formatINR(totalExpense)}</p>
+          <p className="text-xl md:text-3xl font-bold text-white">{formatINR(totalExpense)}</p>
         </div>
 
         <div className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-6 shadow-sm relative overflow-hidden group">
@@ -167,7 +167,7 @@ export default function Dashboard() {
             <h3 className="text-zinc-400 text-sm font-medium">Net Profit</h3>
             <div className="p-2 bg-blue-500/10 rounded-lg"><IndianRupee className="h-4 w-4 text-blue-500" /></div>
           </div>
-          <p className="text-3xl font-bold text-white">{formatINR(netProfit)}</p>
+          <p className="text-xl md:text-3xl font-bold text-white">{formatINR(netProfit)}</p>
         </div>
 
         <div className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-6 shadow-sm relative overflow-hidden group">
@@ -175,7 +175,7 @@ export default function Dashboard() {
             <h3 className="text-zinc-400 text-sm font-medium">Partner Split (50/50)</h3>
             <div className="p-2 bg-purple-500/10 rounded-lg"><SplitSquareHorizontal className="h-4 w-4 text-purple-500" /></div>
           </div>
-          <p className="text-3xl font-bold text-emerald-400">{formatINR(partnerSplit)}</p>
+          <p className="text-xl md:text-3xl font-bold text-emerald-400">{formatINR(partnerSplit)}</p>
           <p className="text-xs text-zinc-500 mt-2">Available per partner</p>
         </div>
       </div>
