@@ -29,18 +29,25 @@ export default function FinancialTracking() {
     e.preventDefault();
     if (!amount || isNaN(Number(amount))) return;
     
-    await addTransaction({
-      type,
-      amount: Number(amount),
-      category,
-      description,
-      date,
-      managedBy,
-      paymentMethod,
-    });
-
+    // Optimistic UI: clear inputs immediately for better UX
     setAmount('');
     setDescription('');
+
+    try {
+      await addTransaction({
+        type,
+        amount: Number(amount),
+        category,
+        description,
+        date,
+        managedBy,
+        paymentMethod,
+      });
+    } catch (err) {
+      console.error('Failed to add transaction:', err);
+      // Optional: restore values if it failed totally, 
+      // but usually Firestore handles retries.
+    }
   };
 
   if (!isLoaded) return null;

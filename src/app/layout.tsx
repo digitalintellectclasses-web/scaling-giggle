@@ -3,6 +3,8 @@ import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import { FinanceProvider } from '@/store/FinanceContext';
 import { AuthProvider } from '@/store/AuthContext';
+import { NotificationProvider } from '@/store/NotificationContext';
+import { WorkProvider } from '@/store/WorkContext';
 import { AppShell } from '@/components/AppShell';
 
 const geistSans = Geist({
@@ -33,9 +35,13 @@ export default function RootLayout({
     >
       <body suppressHydrationWarning className="min-h-full bg-[#09090b] text-zinc-100 overflow-hidden">
         <AuthProvider>
-          <FinanceProvider>
-            <AppShell>{children}</AppShell>
-          </FinanceProvider>
+          <NotificationProvider>
+            <WorkProvider>
+              <FinanceProvider>
+                <AppShell>{children}</AppShell>
+              </FinanceProvider>
+            </WorkProvider>
+          </NotificationProvider>
         </AuthProvider>
       </body>
     </html>

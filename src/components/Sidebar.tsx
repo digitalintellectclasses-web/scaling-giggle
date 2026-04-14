@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Wallet, Users, Landmark, LogOut, ShieldCheck } from 'lucide-react';
+import { LayoutDashboard, Wallet, Users, Landmark, LogOut, ShieldCheck, ClipboardList } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/store/AuthContext';
@@ -11,6 +11,7 @@ import { useFinance } from '@/store/FinanceContext';
 const navigation = [
   { name: 'Dashboard',     href: '/',            icon: LayoutDashboard, adminOnly: true  },
   { name: 'Financials',    href: '/financials',  icon: Wallet,          adminOnly: true  },
+  { name: 'Work',          href: '/work',        icon: ClipboardList,   adminOnly: false },
   { name: 'Partner Equity',href: '/equity',      icon: Landmark,        adminOnly: true  },
   { name: 'Employees',     href: '/employees',   icon: Users,           adminOnly: true  },
   { name: 'Clients',       href: '/clients',     icon: Users,           adminOnly: false },
@@ -19,7 +20,7 @@ const navigation = [
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { currentUser, logout } = useAuth();
+  const { currentUser, logout, updatePassword } = useAuth();
   const { isAdmin } = useFinance();
 
   const handleLogout = async () => {
@@ -90,14 +91,35 @@ export function Sidebar() {
           </div>
         </div>
 
-        {/* Logout */}
-        <button
-          onClick={handleLogout}
-          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold bg-zinc-800 hover:bg-red-500/10 text-zinc-300 hover:text-red-400 border border-zinc-700 hover:border-red-500/30 transition-all"
-        >
-          <LogOut className="w-4 h-4" />
-          Sign Out
-        </button>
+        <div className="flex flex-col gap-2 pt-2">
+          <button
+            onClick={async () => {
+              const pass = prompt('Enter new password (min 6 characters):');
+              if (pass && pass.length >= 6) {
+                try {
+                  await updatePassword(pass);
+                  alert('✓ Password updated successfully.');
+                } catch (err) {
+                  alert('Failed to update password. Please try again.');
+                }
+              } else if (pass) {
+                alert('Password must be at least 6 characters.');
+              }
+            }}
+            className="flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-medium bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700 transition-all"
+          >
+            <ShieldCheck className="w-3.5 h-3.5" />
+            Update Password
+          </button>
+
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold bg-zinc-800 hover:bg-red-500/10 text-zinc-300 hover:text-red-400 border border-zinc-700 hover:border-red-500/30 transition-all"
+          >
+            <LogOut className="w-4 h-4" />
+            Sign Out
+          </button>
+        </div>
       </div>
     </div>
   );

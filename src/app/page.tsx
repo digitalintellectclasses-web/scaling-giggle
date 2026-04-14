@@ -2,11 +2,14 @@
 
 import { useFinance } from '@/store/FinanceContext';
 import { useAuth } from '@/store/AuthContext';
-import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
-import { TrendingUp, IndianRupee, PieChart as PieChartIcon, SplitSquareHorizontal, LayoutDashboard, Activity, CalendarDays, UserPlus, ShieldCheck, User } from 'lucide-react';
+import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, YAxis, CartesianGrid } from 'recharts';
+import { TrendingUp, IndianRupee, PieChart as PieChartIcon, SplitSquareHorizontal, LayoutDashboard, Activity, CalendarDays, UserPlus, ShieldCheck, User, CheckCircle2, ListTodo, Users as UsersIcon } from 'lucide-react';
+import { useWork } from '@/store/WorkContext';
 import { useMemo, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
+import Link from 'next/link';
+import { ArrowRight } from 'lucide-react';
 
 const formatINR = (amount: number) => {
   return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount);
@@ -35,12 +38,30 @@ export default function Dashboard() {
     }
   };
 
-  // Redirect non-admins to Employee Portal
+  const { tasks } = useWork();
+
+  // Redirect non-admins to Work Portal
   useEffect(() => {
     if (isLoaded && !isAdmin) {
-      router.push('/clients');
+      router.push('/work');
     }
   }, [isAdmin, isLoaded, router]);
+
+  // Employee Productivity Stats
+  const employeeStats = useMemo(() => {
+    const employees = users.filter(u => u.role === 'employee');
+    return employees.map(emp => {
+      const empTasks = tasks.filter(t => t.assignedTo === emp.id);
+      const completed = empTasks.filter(t => t.status === 'completed').length;
+      const rate = empTasks.length > 0 ? Math.round((completed / empTasks.length) * 100) : 0;
+      return {
+        ...emp,
+        totalTasks: empTasks.length,
+        completed,
+        rate
+      };
+    }).sort((a, b) => b.rate - a.rate);
+  }, [users, tasks]);
 
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
@@ -190,7 +211,7 @@ export default function Dashboard() {
           </div>
           {dailyInsights.length > 0 ? (
             <div className="h-[300px] w-full mt-4">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                 <LineChart data={dailyInsights} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
                   <XAxis dataKey="day" stroke="#52525b" fontSize={12} tickLine={false} axisLine={false} />
                   <Tooltip 
@@ -241,6 +262,60 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {/* Employee Productivity Analysis */}
+        <div className="col-span-1 lg:col-span-3 bg-zinc-900/40 border border-zinc-800 rounded-2xl p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-2">
+              <UsersIcon className="h-5 w-5 text-emerald-500" />
+              <h3 className="text-lg font-semibold text-white">Employee Performance Analysis</h3>
+            </div>
+            <Link href="/work" className="text-xs text-emerald-500 hover:text-emerald-400 font-bold flex items-center gap-1 transition-colors">
+              Manage Allotments <ArrowRight className="w-3 h-3" />
+            </Link>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+             {employeeStats.map(stat => (
+               <div key={stat.id} className="p-4 bg-zinc-900 border border-zinc-800 rounded-2xl flex flex-col gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500 font-black">
+                      {stat.displayName.slice(0, 2).toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="font-bold text-white leading-tight">{stat.displayName}</p>
+                      <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold">Performance Index</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-zinc-500">Completion Rate</span>
+                      <span className="text-emerald-400 font-bold">{stat.rate}%</span>
+                    </div>
+                    <div className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                      <motion.div 
+                        initial={{ width: 0 }}
+                        animate={{ width: `${stat.rate}%` }}
+                        className={cn("h-full rounded-full", stat.rate > 70 ? "bg-emerald-500" : stat.rate > 40 ? "bg-amber-500" : "bg-red-500")}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 mt-auto">
+                    <div className="bg-zinc-800/50 p-2 rounded-lg text-center">
+                      <p className="text-[10px] text-zinc-500 font-bold uppercase">Tasks</p>
+                      <p className="text-lg font-black text-white">{stat.totalTasks}</p>
+                    </div>
+                    <div className="bg-zinc-800/50 p-2 rounded-lg text-center">
+                      <p className="text-[10px] text-zinc-500 font-bold uppercase">Done</p>
+                      <p className="text-lg font-black text-emerald-400">{stat.completed}</p>
+                    </div>
+                  </div>
+               </div>
+             ))}
+          </div>
+        </div>
+
         {/* Expense Distribution */}
         <div className="col-span-1 lg:col-span-3 bg-zinc-900/40 border border-zinc-800 rounded-2xl p-6">
           <div className="flex items-center gap-2 mb-6">
@@ -249,7 +324,7 @@ export default function Dashboard() {
           </div>
           {expenseByCategory.length > 0 ? (
             <div className="h-[300px] w-full flex items-center justify-center">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                 <PieChart>
                   <Pie
                     data={expenseByCategory}
@@ -275,7 +350,6 @@ export default function Dashboard() {
              <div className="h-[300px] flex items-center justify-center text-zinc-500">No expenses recorded for this month.</div>
           )}
         </div>
-      </div>
 
       {/* ── Employee Management ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-4">

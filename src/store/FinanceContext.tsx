@@ -1,7 +1,10 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { db } from '@/lib/firebase';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { auth, db } from '@/lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { useNotifications } from './NotificationContext';
+import { useAuth } from './AuthContext';
 import { 
   collection, 
   onSnapshot, 
@@ -10,7 +13,9 @@ import {
   deleteDoc, 
   query, 
   orderBy,
-  writeBatch
+  writeBatch,
+  enableNetwork,
+  disableNetwork
 } from 'firebase/firestore';
 
 export type Transaction = {
@@ -43,11 +48,11 @@ export type PartnerEquity = {
 
 export type SalaryPayment = {
   id: string;
-  employeeUserId: string;   // username (e.g. "PRIYANKA")
-  employeeName: string;     // display name
+  employeeUserId: string;
+  employeeName: string;
   amount: number;
-  month: string;            // e.g. "2026-03"
-  date: string;             // actual payment date
+  month: string;
+  date: string;
   paidBy: 'Pratik' | 'Pranav';
   paymentMethod: 'cash' | 'online';
   note: string;
@@ -73,6 +78,8 @@ type FinanceContextType = {
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
 
 export function FinanceProvider({ children }: { children: React.ReactNode }) {
+  const { addNotification } = useNotifications();
+  const { users } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [equities, setEquities] = useState<PartnerEquity[]>([]);
@@ -80,81 +87,174 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // 1. Real-time Subscription to collections
-  useEffect(() => {
-    const unsubTx = onSnapshot(query(collection(db, 'transactions'), orderBy('date', 'desc')), 
-      (snapshot) => {
-        setTransactions(snapshot.docs.map(doc => ({ ...doc.data() as Transaction, id: doc.id })));
-      },
-      (err) => {
-        console.error("Firestore Transactions Sync Error:", err);
-      }
-    );
-  
-    const unsubClients = onSnapshot(collection(db, 'clients'), 
-      (snapshot) => {
-        setClients(snapshot.docs.map(doc => ({ ...doc.data() as Client, id: doc.id })));
-      },
-      (err) => console.error("Firestore Clients Sync Error:", err)
-    );
-  
-    const unsubEquities = onSnapshot(query(collection(db, 'equities'), orderBy('date', 'desc')), 
-      (snapshot) => {
-        setEquities(snapshot.docs.map(doc => ({ ...doc.data() as PartnerEquity, id: doc.id })));
-      },
-      (err) => console.error("Firestore Equities Sync Error:", err)
-    );
-  
-    const unsubSalaries = onSnapshot(query(collection(db, 'salaries'), orderBy('date', 'desc')), 
-      (snapshot) => {
-        setSalaryPayments(snapshot.docs.map(doc => ({ ...doc.data() as SalaryPayment, id: doc.id })));
-      },
-      (err) => console.error("Firestore Salaries Sync Error:", err)
-    );
+  const loadedRef = useRef({ tx: false, clients: false, equities: false, salaries: false });
+  // Track the active Firestore unsub functions so we can restart them if needed
+  const unsubRef = useRef<(() => void) | null>(null);
 
-    setIsLoaded(true);
-    return () => {
+  const checkAllLoaded = () => {
+    const r = loadedRef.current;
+    if (r.tx && r.clients && r.equities && r.salaries) {
+      setIsLoaded(true);
+    }
+  };
+
+    const startFirestoreListeners = () => {
+      if (unsubRef.current) {
+        unsubRef.current();
+        unsubRef.current = null;
+      }
+      loadedRef.current = { tx: false, clients: false, equities: false, salaries: false };
+
+      // Master UI Failsafe: If Firestore takes > 3s, show the UI anyway
+      const forceLoadTimeout = setTimeout(() => {
+        if (!isLoaded) {
+          console.warn('⚠️ Firestore slow response - forcing UI display.');
+          setIsLoaded(true);
+        }
+      }, 3000);
+
+
+      const unsubTx = onSnapshot(
+        query(collection(db, 'transactions'), orderBy('date', 'desc')),
+        (snapshot) => {
+          setTransactions(snapshot.docs.map(d => ({ ...d.data() as Transaction, id: d.id })));
+          loadedRef.current.tx = true;
+          checkAllLoaded();
+        },
+        (err) => {
+          console.error('Firestore Transactions Error:', err.code);
+          loadedRef.current.tx = true;
+          checkAllLoaded();
+        }
+      );
+
+      const unsubClients = onSnapshot(
+        collection(db, 'clients'),
+        (snapshot) => {
+          setClients(snapshot.docs.map(d => ({ ...d.data() as Client, id: d.id })));
+          loadedRef.current.clients = true;
+          checkAllLoaded();
+        },
+        (err) => {
+          console.error('Firestore Clients Error:', err.code);
+          loadedRef.current.clients = true;
+          checkAllLoaded();
+        }
+      );
+
+      const unsubEquities = onSnapshot(
+        query(collection(db, 'equities'), orderBy('date', 'desc')),
+        (snapshot) => {
+          setEquities(snapshot.docs.map(d => ({ ...d.data() as PartnerEquity, id: d.id })));
+          loadedRef.current.equities = true;
+          checkAllLoaded();
+        },
+        (err) => {
+          console.error('Firestore Equities Error:', err.code);
+          loadedRef.current.equities = true;
+          checkAllLoaded();
+        }
+      );
+
+      const unsubSalaries = onSnapshot(
+        query(collection(db, 'salaries'), orderBy('date', 'desc')),
+        (snapshot) => {
+          setSalaryPayments(snapshot.docs.map(d => ({ ...d.data() as SalaryPayment, id: d.id })));
+          loadedRef.current.salaries = true;
+          checkAllLoaded();
+        },
+        (err) => {
+          console.error('Firestore Salaries Error:', err.code);
+          loadedRef.current.salaries = true;
+          checkAllLoaded();
+        }
+      );
+
+      unsubRef.current = () => {
+      clearTimeout(forceLoadTimeout);
       unsubTx();
       unsubClients();
       unsubEquities();
       unsubSalaries();
     };
+  };
+
+  // Main effect: wait for Firebase Auth, then start Firestore listeners.
+  // hasValidAuth tracks whether we've successfully started listeners WITH auth.
+  useEffect(() => {
+    let hasValidAuth = false;
+    let authTimeoutId: ReturnType<typeof setTimeout>;
+
+    const unsubAuth = onAuthStateChanged(auth, (user) => {
+      if (user && !hasValidAuth) {
+        hasValidAuth = true;
+        clearTimeout(authTimeoutId);
+        startFirestoreListeners();
+      }
+    });
+
+    // Auth Failsafe: if Firebase Auth takes more than 2.5s start listeners anyway.
+    authTimeoutId = setTimeout(() => {
+      if (!hasValidAuth) {
+        console.warn('Auth timeout — starting listeners.');
+        startFirestoreListeners();
+      }
+    }, 2500);
+
+    return () => {
+      unsubAuth();
+      clearTimeout(authTimeoutId);
+      if (unsubRef.current) {
+        unsubRef.current();
+        unsubRef.current = null;
+      }
+    };
   }, []);
 
-  // 2. Migration Logic: First time load from LocalStorage and upload to Cloud
+  // One-time migration from LocalStorage → Firestore
   useEffect(() => {
     const migrate = async () => {
-      const localCheck = localStorage.getItem('ag_cloud_migrated');
-      if (localCheck === 'true') return;
-
+      if (localStorage.getItem('ag_cloud_migrated') === 'true') return;
       const savedTx = localStorage.getItem('ag_transactions');
       const savedClients = localStorage.getItem('ag_clients');
       const savedEquities = localStorage.getItem('ag_equities');
       const savedSalaries = localStorage.getItem('ag_salaries');
-
       if (savedTx || savedClients || savedEquities || savedSalaries) {
-        const batch = writeBatch(db);
-        
-        if (savedTx) JSON.parse(savedTx).forEach((t: Transaction) => batch.set(doc(db, 'transactions', t.id), t));
-        if (savedClients) JSON.parse(savedClients).forEach((c: Client) => batch.set(doc(db, 'clients', c.id), c));
-        if (savedEquities) JSON.parse(savedEquities).forEach((e: PartnerEquity) => batch.set(doc(db, 'equities', e.id), e));
-        if (savedSalaries) JSON.parse(savedSalaries).forEach((s: SalaryPayment) => batch.set(doc(db, 'salaries', s.id), s));
-        
-        await batch.commit();
+        try {
+          const batch = writeBatch(db);
+          if (savedTx) JSON.parse(savedTx).forEach((t: Transaction) => batch.set(doc(db, 'transactions', t.id), t));
+          if (savedClients) JSON.parse(savedClients).forEach((c: Client) => batch.set(doc(db, 'clients', c.id), c));
+          if (savedEquities) JSON.parse(savedEquities).forEach((e: PartnerEquity) => batch.set(doc(db, 'equities', e.id), e));
+          if (savedSalaries) JSON.parse(savedSalaries).forEach((s: SalaryPayment) => batch.set(doc(db, 'salaries', s.id), s));
+          await batch.commit();
+          console.log('✅ Migration to Firestore complete.');
+        } catch (err) {
+          console.error('❌ Migration failed:', err);
+        }
       }
       localStorage.setItem('ag_cloud_migrated', 'true');
     };
-    
     migrate();
   }, []);
 
   const addTransaction = async (tx: Omit<Transaction, 'id'>) => {
+    if (!auth.currentUser) return;
     const id = crypto.randomUUID();
-    try {
-      await setDoc(doc(db, 'transactions', id), { ...tx, id });
-    } catch (err: any) {
-      console.error("Firestore Transaction Write Failed:", err);
+    try { 
+      await setDoc(doc(db, 'transactions', id), { ...tx, id }); 
+      
+      // Notify other owner(s)
+      const otherAdmins = users.filter(u => u.role === 'admin' && u.id !== currentUser?.id);
+      for (const admin of otherAdmins) {
+        await addNotification({
+          type: 'transaction',
+          message: `${currentUser?.displayName} added transaction: ${tx.description} (${tx.type === 'income' ? '+' : '-'}${tx.amount})`,
+          targetUserId: admin.id,
+          relatedId: id
+        });
+      }
     }
+    catch (err: any) { console.error('Transaction write failed:', err.code); }
   };
 
   const addClient = async (client: Omit<Client, 'id'>) => {
@@ -165,11 +265,30 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const addEquity = async (equity: Omit<PartnerEquity, 'id'>) => {
     const id = crypto.randomUUID();
     await setDoc(doc(db, 'equities', id), { ...equity, id });
+
+    // Notify other owner
+    const otherAdmins = users.filter(u => u.role === 'admin' && u.id !== currentUser?.id);
+    for (const admin of otherAdmins) {
+      await addNotification({
+        type: 'transaction',
+        message: `${currentUser?.displayName} updated Equity: ${equity.type} (${equity.amount})`,
+        targetUserId: admin.id,
+        relatedId: id
+      });
+    }
   };
 
   const addSalaryPayment = async (sp: Omit<SalaryPayment, 'id'>) => {
     const id = crypto.randomUUID();
     await setDoc(doc(db, 'salaries', id), { ...sp, id });
+
+    // Notify employee
+    await addNotification({
+      type: 'transaction',
+      message: `Salary payment received: ${sp.month} (${sp.amount})`,
+      targetUserId: sp.employeeUserId,
+      relatedId: id
+    });
   };
 
   const deleteSalaryPayment = async (id: string) => {
@@ -202,4 +321,3 @@ export function useFinance() {
   }
   return context;
 }
-

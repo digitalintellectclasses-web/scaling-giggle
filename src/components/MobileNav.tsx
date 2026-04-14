@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Wallet, Users, Landmark } from 'lucide-react';
+import { LayoutDashboard, Wallet, Users, Landmark, ClipboardList } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { useFinance } from '@/store/FinanceContext';
@@ -10,9 +10,9 @@ import { useFinance } from '@/store/FinanceContext';
 const navigation = [
   { name: 'Home',      href: '/',            icon: LayoutDashboard, adminOnly: true  },
   { name: 'Finance',   href: '/financials',  icon: Wallet,          adminOnly: true  },
+  { name: 'Work',      href: '/work',        icon: ClipboardList,   adminOnly: false },
   { name: 'Equity',    href: '/equity',      icon: Landmark,        adminOnly: true  },
-  { name: 'Employees', href: '/employees',   icon: Users,           adminOnly: true  },
-  { name: 'Clients',   href: '/clients',     icon: Users,           adminOnly: false },
+  { name: 'Team',      href: '/employees',   icon: Users,           adminOnly: true  },
 ];
 
 export function MobileNav() {

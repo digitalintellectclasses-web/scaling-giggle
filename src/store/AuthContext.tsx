@@ -4,10 +4,8 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { auth, db } from '@/lib/firebase';
 import { 
   onAuthStateChanged, 
-  signInWithEmailAndPassword, 
   signInAnonymously,
   signOut,
-  User as FirebaseUser 
 } from 'firebase/auth';
 import { 
   collection, 
@@ -23,19 +21,40 @@ export type AppUser = {
   id: string;
   username: string;
   email?: string;
-  password?: string; // Only for legacy local users, eventually remove
+  password?: string;
   role: UserRole;
   displayName: string;
 };
 
-// Seed users for initial cloud sync if DB is empty
+// Always-available fallback users — login works even before Firestore responds
 const SEED_USERS: AppUser[] = [
   {
-    id: 'usr_admin',
-    username: 'PPSOLAR',
-    password: 'PPSOLAR2026',
+    id: 'usr_pratik',
+    username: 'PRATIK',
+    password: 'PratikIvory2026',
     role: 'admin',
-    displayName: 'Admin (PP Solar)',
+    displayName: 'Pratik',
+  },
+  {
+    id: 'usr_pranav',
+    username: 'PRANAV',
+    password: 'PranavIvory2026',
+    role: 'admin',
+    displayName: 'Pranav',
+  },
+  {
+    id: 'usr_palak',
+    username: 'PALAK',
+    password: 'PalakIvory2026',
+    role: 'employee',
+    displayName: 'Palak',
+  },
+  {
+    id: 'usr_vaishnav',
+    username: 'VAISHNAV',
+    password: 'VaishnavIvory2026',
+    role: 'employee',
+    displayName: 'Vaishnav',
   },
   {
     id: 'usr_priyanka',
@@ -52,6 +71,7 @@ type AuthContextType = {
   login: (username: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
   createEmployee: (username: string, email: string, password: string, displayName: string) => Promise<void>;
+  updatePassword: (newPassword: string) => Promise<void>;
   isAuthenticated: boolean;
   isLoaded: boolean;
 };
@@ -59,81 +79,92 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [users, setUsers] = useState<AppUser[]>([]);
+  const [users, setUsers] = useState<AppUser[]>(SEED_USERS);
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // 1. Sync users list from Firestore
   useEffect(() => {
-    const q = query(collection(db, 'users'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const usersList: AppUser[] = [];
-      snapshot.forEach((doc) => {
-        usersList.push(doc.data() as AppUser);
-      });
-      
-      // If Firestore is empty, upload seed users
-      if (usersList.length === 0) {
-        SEED_USERS.forEach(async (u) => {
-          await setDoc(doc(db, 'users', u.id), u);
-        });
-      } else {
-        setUsers(usersList);
-      }
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  // 2. Listen for Auth State changes
-  useEffect(() => {
-    // 1. Immediate local session recovery (prevents UI flickering/logout on refresh)
+    // Restore app-level session immediately (prevents login flicker on refresh)
     const savedSession = localStorage.getItem('ag_session');
     if (savedSession) {
-      setCurrentUser(JSON.parse(savedSession));
+      try { setCurrentUser(JSON.parse(savedSession)); } 
+      catch { localStorage.removeItem('ag_session'); }
     }
 
-    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
-      // 2. Ensure a Firebase Auth session is active for Firestore Cloud Sync
-      if (!fbUser) {
-        try {
-          // Using Anonymous Auth to enable data synchronization across devices
-          // without requiring manual account creation in Firebase Console.
+    let unsubUsers: (() => void) | undefined;
+
+    const initAuth = async () => {
+      // Master Auth Failsafe: If Firebase Auth takes > 3.5s, force load the app.
+      // This prevents the "infinite spinner" if Auth is blocked or slow.
+      const authFailsafe = setTimeout(() => {
+        if (!isLoaded) {
+          console.warn('⚠️ Auth initialization timeout - forcing app to load.');
+          setIsLoaded(true);
+        }
+      }, 3500);
+
+      try {
+        // IMPORTANT: Wait for Firebase to finish restoring any persisted auth session.
+        await auth.authStateReady();
+
+        if (!auth.currentUser) {
           await signInAnonymously(auth);
-        } catch (err: any) {
-          if (err.code === 'auth/admin-restricted-operation') {
-            console.warn("Firebase Cloud Sync: Anonymous Auth is disabled in Firebase Console. Please enable it to allow cross-device synchronization.");
-          } else {
-            console.error("Firebase Sync Authentication failed:", err);
-          }
+        }
+      } catch (err: any) {
+        if (err.code === 'auth/admin-restricted-operation') {
+          console.warn('Anonymous Auth is disabled in Firebase Console.');
+        } else {
+          console.error('Firebase Auth init failed:', err.code);
         }
       }
-      
-      // If no local session found, we are truly logged out
-      if (!localStorage.getItem('ag_session')) {
+
+      // Cleanup failsafe and settle auth state
+      clearTimeout(authFailsafe);
+      setIsLoaded(true);
+
+      unsubUsers = onSnapshot(
+        query(collection(db, 'users')),
+        (snapshot) => {
+          const list: AppUser[] = snapshot.docs.map(d => d.data() as AppUser);
+          if (list.length === 0) {
+            SEED_USERS.forEach(u => setDoc(doc(db, 'users', u.id), u));
+          } else {
+            setUsers(list);
+          }
+        },
+        (err) => console.error('Firestore Users Error:', err.code)
+      );
+    };
+
+    initAuth();
+
+
+    // Watch for auth state changes (handle session expiry etc.)
+    const unsubAuth = onAuthStateChanged(auth, (fbUser) => {
+      if (!fbUser && !localStorage.getItem('ag_session')) {
         setCurrentUser(null);
       }
-      
-      setIsLoaded(true);
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubAuth();
+      if (unsubUsers) unsubUsers();
+    };
   }, []);
 
-  // Handle Login (Simplified for this transition: we still check our registry)
   const login = async (username: string, password: string): Promise<boolean> => {
     const user = users.find(
       u => u.username.toLowerCase() === username.toLowerCase() && u.password === password
     );
-    
     if (user) {
-      // For this specific app, we use a single Firebase "Technical" account 
-      // or we just simulate the login since Firestore is already syncing.
-      // REAL fix: You should create real firebase auth accounts for each user.
       setCurrentUser(user);
       localStorage.setItem('ag_session', JSON.stringify(user));
-      if (user.role === 'admin') {
-        localStorage.setItem('ag_isAdmin', 'true');
+      if (user.role === 'admin') localStorage.setItem('ag_isAdmin', 'true');
+
+      // Re-establish Firebase session if signOut() cleared it previously
+      if (!auth.currentUser) {
+        try { await signInAnonymously(auth); }
+        catch (err: any) { console.error('Re-auth after login failed:', err.code); }
       }
       return true;
     }
@@ -150,29 +181,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const createEmployee = async (username: string, email: string, password: string, displayName: string) => {
     const newUser: AppUser = {
       id: `usr_${crypto.randomUUID()}`,
-      username,
-      email,
-      password,
+      username, email, password,
       role: 'employee',
       displayName,
     };
-    
-    // Save to Firestore (will automatically sync to all devices via onSnapshot)
     await setDoc(doc(db, 'users', newUser.id), newUser);
+  };
+  
+  const updatePassword = async (newPassword: string) => {
+    if (!currentUser) return;
+    const updatedUser = { ...currentUser, password: newPassword };
+    await setDoc(doc(db, 'users', currentUser.id), updatedUser);
+    setCurrentUser(updatedUser);
+    localStorage.setItem('ag_session', JSON.stringify(updatedUser));
   };
 
   return (
-    <AuthContext.Provider
-      value={{
-        users,
-        currentUser,
-        login,
-        logout,
-        createEmployee,
-        isAuthenticated: currentUser !== null,
-        isLoaded,
-      }}
-    >
+    <AuthContext.Provider value={{
+      users, currentUser, login, logout, createEmployee, updatePassword,
+      isAuthenticated: currentUser !== null,
+      isLoaded,
+    }}>
       {children}
     </AuthContext.Provider>
   );
@@ -183,4 +212,3 @@ export function useAuth() {
   if (!ctx) throw new Error('useAuth must be used within AuthProvider');
   return ctx;
 }
-

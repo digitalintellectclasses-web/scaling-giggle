@@ -7,7 +7,8 @@ import { useFinance } from '@/store/FinanceContext';
 import { LoginPage } from '@/components/LoginPage';
 import { Sidebar } from '@/components/Sidebar';
 import { MobileNav } from '@/components/MobileNav';
-import { LogOut } from 'lucide-react';
+import { NotificationBell } from '@/components/NotificationBell';
+import { LogOut, Bell, Key } from 'lucide-react';
 
 /**
  * AppShell is the root client wrapper that:
@@ -16,16 +17,19 @@ import { LogOut } from 'lucide-react';
  * 3. Renders the full sidebar + main layout when authenticated
  */
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, currentUser, isLoaded: authLoaded } = useAuth();
+  const { isAuthenticated, currentUser, isLoaded: authLoaded, updatePassword } = useAuth();
   const { setIsAdmin, isLoaded: financeLoaded } = useFinance();
   const pathname = usePathname();
 
-  // Keep FinanceContext isAdmin in sync with the authenticated user's role
+  // Set isAdmin as soon as we know the user's role — do NOT wait for
+  // financeLoaded. Waiting caused the 4s timeout to set financeLoaded=true
+  // before auth arrived, making the dashboard see isAdmin=false and redirect
+  // admin users to /clients permanently.
   useEffect(() => {
-    if (authLoaded && financeLoaded) {
+    if (authLoaded) {
       setIsAdmin(currentUser?.role === 'admin');
     }
-  }, [currentUser, authLoaded, financeLoaded, setIsAdmin]);
+  }, [currentUser, authLoaded, setIsAdmin]);
 
   // While hydrating, show a blank dark screen to prevent flash
   if (!authLoaded) {
@@ -62,13 +66,34 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <span className="text-sm font-bold tracking-tight text-white uppercase italic">Finance</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-[10px] font-bold text-zinc-400">
-               {currentUser?.displayName.slice(0, 2).toUpperCase()}
-            </div>
+             <button
+               onClick={async () => {
+                 const pass = prompt('Enter new password (min 6 characters):');
+                 if (pass && pass.length >= 6) {
+                   try {
+                     await updatePassword(pass);
+                     alert('✓ Password updated.');
+                   } catch (err) { alert('Failed to update.'); }
+                 } else if (pass) { alert('Password too short.'); }
+               }}
+               className="p-1.5 rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-400 focus:text-white transition-colors"
+               title="Update Password"
+             >
+               <Key className="w-3.5 h-3.5" />
+             </button>
+             <NotificationBell />
+             <div className="w-8 h-8 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-[10px] font-bold text-zinc-400">
+                {currentUser?.displayName.slice(0, 2).toUpperCase()}
+             </div>
           </div>
         </header>
 
         <main className="flex-1 overflow-y-auto overflow-x-hidden relative scroll-smooth">
+          {/* Desktop Notification Tooltip area */}
+          <div className="hidden md:flex absolute top-6 right-10 z-30">
+             <NotificationBell />
+          </div>
+
           <div className="px-4 py-6 md:p-10 pb-28 md:pb-10">
             {children}
           </div>
