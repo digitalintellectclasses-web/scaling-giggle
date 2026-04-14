@@ -89,11 +89,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </header>
 
         <main className="flex-1 overflow-y-auto overflow-x-hidden relative scroll-smooth">
-          {/* Desktop Notification Tooltip area */}
-          <div className="hidden md:flex absolute top-6 right-10 z-30">
-             <NotificationBell />
-          </div>
-
           <div className="px-4 py-6 md:p-10 pb-28 md:pb-10">
             {children}
           </div>
