@@ -3,13 +3,14 @@
 import { useFinance } from '@/store/FinanceContext';
 import { useAuth } from '@/store/AuthContext';
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, YAxis, CartesianGrid } from 'recharts';
-import { TrendingUp, IndianRupee, PieChart as PieChartIcon, SplitSquareHorizontal, LayoutDashboard, Activity, CalendarDays, UserPlus, ShieldCheck, User, CheckCircle2, ListTodo, Users as UsersIcon } from 'lucide-react';
+import { TrendingUp, IndianRupee, PieChart as PieChartIcon, SplitSquareHorizontal, LayoutDashboard, Activity, CalendarDays, UserPlus, ShieldCheck, User, CheckCircle2, ListTodo, Users as UsersIcon, ArrowRight } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { cn } from '@/lib/utils';
 import { useWork } from '@/store/WorkContext';
 import { useMemo, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import Link from 'next/link';
-import { ArrowRight } from 'lucide-react';
 
 const formatINR = (amount: number) => {
   return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount);
@@ -350,6 +351,7 @@ export default function Dashboard() {
              <div className="h-[300px] flex items-center justify-center text-zinc-500">No expenses recorded for this month.</div>
           )}
         </div>
+      </div>
 
       {/* ── Employee Management ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-4">

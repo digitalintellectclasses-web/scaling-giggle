@@ -79,7 +79,7 @@ const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
 
 export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const { addNotification } = useNotifications();
-  const { users } = useAuth();
+  const { users, currentUser } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [equities, setEquities] = useState<PartnerEquity[]>([]);

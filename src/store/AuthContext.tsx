@@ -125,12 +125,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       unsubUsers = onSnapshot(
         query(collection(db, 'users')),
         (snapshot) => {
-          const list: AppUser[] = snapshot.docs.map(d => d.data() as AppUser);
-          if (list.length === 0) {
-            SEED_USERS.forEach(u => setDoc(doc(db, 'users', u.id), u));
-          } else {
-            setUsers(list);
-          }
+          const dbUsers: AppUser[] = snapshot.docs.map(d => d.data() as AppUser);
+          
+          // Merge SEED_USERS with db users to ensure admins are always available
+          // Database users take priority if there's a conflict, but SEED_USERS
+          // are added if their ID doesn't exist in the DB list.
+          const merged = [...dbUsers];
+          SEED_USERS.forEach(seed => {
+            if (!merged.find(u => u.id === seed.id)) {
+              merged.push(seed);
+              // Background sync: If a seed user is missing in DB, attempt to add it
+              setDoc(doc(db, 'users', seed.id), seed).catch(e => {
+                if (e.code !== 'permission-denied') console.error('Seed sync fail:', e.code);
+              });
+            }
+          });
+          
+          setUsers(merged);
         },
         (err) => console.error('Firestore Users Error:', err.code)
       );
@@ -153,9 +164,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = async (username: string, password: string): Promise<boolean> => {
-    const user = users.find(
-      u => u.username.toLowerCase() === username.toLowerCase() && u.password === password
-    );
+    // Check both current sync state and SEED_USERS fallback to handle cloud delays
+    const searchTarget = username.trim().toLowerCase();
+    const user = users.find(u => u.username.toLowerCase() === searchTarget && u.password === password)
+              || SEED_USERS.find(u => u.username.toLowerCase() === searchTarget && u.password === password);
+
     if (user) {
       setCurrentUser(user);
       localStorage.setItem('ag_session', JSON.stringify(user));
