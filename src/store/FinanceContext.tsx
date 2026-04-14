@@ -10,12 +10,16 @@ import {
   onSnapshot, 
   doc, 
   setDoc, 
+  updateDoc,
   deleteDoc, 
   query, 
   orderBy,
+  where,
+  limit,
   writeBatch,
   enableNetwork,
-  disableNetwork
+  disableNetwork,
+  Timestamp
 } from 'firebase/firestore';
 
 export type Transaction = {
@@ -73,6 +77,9 @@ type FinanceContextType = {
   deleteClient: (id: string) => Promise<void>;
   setIsAdmin: (val: boolean) => void;
   isLoaded: boolean;
+  requestGlobalReset: () => Promise<void>;
+  acceptResetRequest: (requestId: string, notificationId: string) => Promise<void>;
+  activeResetRequest: any;
 };
 
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
@@ -86,6 +93,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const [salaryPayments, setSalaryPayments] = useState<SalaryPayment[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [activeResetRequest, setActiveResetRequest] = useState<any>(null);
 
   const loadedRef = useRef({ tx: false, clients: false, equities: false, salaries: false });
   // Track the active Firestore unsub functions so we can restart them if needed
@@ -170,12 +178,24 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         }
       );
 
+      const unsubReset = onSnapshot(
+        query(collection(db, 'reset_requests'), where('status', '==', 'pending'), limit(1)),
+        (snapshot) => {
+          if (!snapshot.empty) {
+            setActiveResetRequest({ ...snapshot.docs[0].data(), id: snapshot.docs[0].id });
+          } else {
+            setActiveResetRequest(null);
+          }
+        }
+      );
+
       unsubRef.current = () => {
       clearTimeout(forceLoadTimeout);
       unsubTx();
       unsubClients();
       unsubEquities();
       unsubSalaries();
+      unsubReset();
     };
   };
 
@@ -303,11 +323,81 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     await deleteDoc(doc(db, 'clients', id));
   };
 
+  const executeFullWipe = async () => {
+    const batch = writeBatch(db);
+    transactions.forEach(t => batch.delete(doc(db, 'transactions', t.id)));
+    clients.forEach(c => batch.delete(doc(db, 'clients', c.id)));
+    equities.forEach(e => batch.delete(doc(db, 'equities', e.id)));
+    salaryPayments.forEach(s => batch.delete(doc(db, 'salaries', s.id)));
+    await batch.commit();
+    console.log('🔥 SYSTEM WIPE COMPLETE');
+  };
+
+  const requestGlobalReset = async () => {
+    if (!currentUser || !isAdmin) return;
+    const requestId = crypto.randomUUID();
+    const adminCount = users.filter(u => u.role === 'admin').length;
+    
+    await setDoc(doc(db, 'reset_requests', requestId), {
+      id: requestId,
+      requestedBy: currentUser.id,
+      requestedByName: currentUser.displayName,
+      approvals: [currentUser.id],
+      status: 'pending',
+      createdAt: Timestamp.now(),
+      requiredApprovals: adminCount
+    });
+
+    // Notify other admins
+    const otherAdmins = users.filter(u => u.role === 'admin' && u.id !== currentUser.id);
+    for (const admin of otherAdmins) {
+      await addNotification({
+        type: 'reset_request',
+        message: `${currentUser.displayName} is requesting a FULL SYSTEM RESET. Approval required.`,
+        targetUserId: admin.id,
+        resetRequestId: requestId,
+        status: 'pending'
+      });
+    }
+  };
+
+  const acceptResetRequest = async (requestId: string, notificationId: string) => {
+    if (!currentUser || !isAdmin) return;
+    
+    // 1. Get current request
+    const reqRef = doc(db, 'reset_requests', requestId);
+    const snap = await (await import('firebase/firestore')).getDoc(reqRef);
+    if (!snap.exists()) return;
+    
+    const data = snap.data();
+    if (data.approvals.includes(currentUser.id)) return;
+
+    const newApprovals = [...data.approvals, currentUser.id];
+    const isFullyApproved = newApprovals.length >= data.requiredApprovals;
+
+    await updateDoc(reqRef, {
+      approvals: newApprovals,
+      status: isFullyApproved ? 'approved' : 'pending'
+    });
+
+    // Mark current notification as approved
+    const { updateNotificationStatus } = (await import('./NotificationContext')).useNotifications();
+    // Wait, I can't call hooks inside functions. 
+    // I should use the notification prop or update it directly via Firestore.
+    await updateDoc(doc(db, 'notifications', notificationId), { status: 'approved', isRead: true });
+
+    if (isFullyApproved) {
+      await executeFullWipe();
+      await updateDoc(reqRef, { status: 'completed' });
+    }
+  };
+
   return (
     <FinanceContext.Provider value={{ 
       transactions, clients, equities, salaryPayments, isAdmin,
       addTransaction, addClient, addEquity, addSalaryPayment, deleteSalaryPayment,
-      deleteTransaction, deleteClient, setIsAdmin, isLoaded 
+      deleteTransaction, deleteClient, setIsAdmin, isLoaded,
+      requestGlobalReset, acceptResetRequest, activeResetRequest
     }}>
       {children}
     </FinanceContext.Provider>

@@ -19,19 +19,23 @@ import {
 
 export type Notification = {
   id: string;
-  type: 'transaction' | 'work' | 'system';
+  type: 'transaction' | 'work' | 'system' | 'reset_request';
   message: string;
   targetUserId: string;
   isRead: boolean;
   createdAt: any;
   relatedId?: string;
+  resetRequestId?: string;
+  status?: 'pending' | 'approved' | 'rejected';
 };
 
 type NotificationContextType = {
   notifications: Notification[];
+  unreadCount: number;
   toasts: string[];
   addNotification: (notif: Omit<Notification, 'id' | 'isRead' | 'createdAt'>) => Promise<void>;
   markAsRead: (id: string) => Promise<void>;
+  updateNotificationStatus: (id: string, status: 'approved' | 'rejected') => Promise<void>;
   clearToast: (index: number) => void;
 };
 
@@ -89,13 +93,19 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     await updateDoc(doc(db, 'notifications', id), { isRead: true });
   };
 
+  const updateNotificationStatus = async (id: string, status: 'approved' | 'rejected') => {
+    await updateDoc(doc(db, 'notifications', id), { status, isRead: true });
+  };
+
   const clearToast = (index: number) => {
     setToasts(prev => prev.filter((_, i) => i !== index));
   };
 
+  const unreadCount = notifications.filter(n => !n.isRead).length;
+
   return (
     <NotificationContext.Provider value={{ 
-      notifications, toasts, addNotification, markAsRead, clearToast 
+      notifications, unreadCount, toasts, addNotification, markAsRead, updateNotificationStatus, clearToast 
     }}>
       {children}
       

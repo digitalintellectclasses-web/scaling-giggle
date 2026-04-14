@@ -3,7 +3,7 @@
 import { useFinance } from '@/store/FinanceContext';
 import { useAuth } from '@/store/AuthContext';
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, YAxis, CartesianGrid } from 'recharts';
-import { TrendingUp, IndianRupee, PieChart as PieChartIcon, SplitSquareHorizontal, LayoutDashboard, Activity, CalendarDays, UserPlus, ShieldCheck, User, CheckCircle2, ListTodo, Users as UsersIcon, ArrowRight } from 'lucide-react';
+import { TrendingUp, IndianRupee, PieChart as PieChartIcon, SplitSquareHorizontal, LayoutDashboard, Activity, CalendarDays, UserPlus, ShieldCheck, User, CheckCircle2, ListTodo, Users as UsersIcon, ArrowRight, ShieldAlert } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useWork } from '@/store/WorkContext';
@@ -17,9 +17,17 @@ const formatINR = (amount: number) => {
 };
 
 export default function Dashboard() {
-  const { transactions, equities, isAdmin, isLoaded } = useFinance();
+  const { transactions, equities, isAdmin, isLoaded, requestGlobalReset, activeResetRequest } = useFinance();
   const { users, createEmployee } = useAuth();
   const router = useRouter();
+
+  const handleRequestReset = async () => {
+    const confirm = window.confirm("Requesting a system-wide reset will alert all other admins. Proceed?");
+    if (confirm) {
+      await requestGlobalReset();
+      alert("Reset request sent to other administrators.");
+    }
+  };
 
   // Employee creation form state
   const [empUsername, setEmpUsername] = useState('');
@@ -161,9 +169,27 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6 pb-20">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Admin Dashboard</h1>
-        <p className="text-zinc-400">Executive financial insights and global state activity.</p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Admin Dashboard</h1>
+          <p className="text-zinc-400">Executive financial insights and global state activity.</p>
+        </div>
+
+        {isAdmin && (
+           <button 
+             onClick={handleRequestReset}
+             disabled={!!activeResetRequest}
+             className={cn(
+               "flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all border",
+               activeResetRequest 
+                 ? "bg-amber-500/10 border-amber-500/50 text-amber-500 animate-pulse cursor-wait" 
+                 : "bg-red-500/10 border-red-500/50 text-red-500 hover:bg-red-500 hover:text-white"
+             )}
+           >
+             <ShieldAlert className="w-4 h-4" />
+             {activeResetRequest ? "Reset Pending Approval..." : "Request Global Data Reset"}
+           </button>
+        )}
       </div>
 
       {/* Metrics Row */}

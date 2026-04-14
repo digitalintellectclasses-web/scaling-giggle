@@ -2,16 +2,18 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Wallet, Users, Landmark, LogOut, ShieldCheck, ClipboardList } from 'lucide-react';
+import { LayoutDashboard, Wallet, Users, Landmark, LogOut, ShieldCheck, ClipboardList, Bell } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/store/AuthContext';
 import { useFinance } from '@/store/FinanceContext';
+import { useNotifications } from '@/store/NotificationContext';
 
 const navigation = [
   { name: 'Dashboard',     href: '/',            icon: LayoutDashboard, adminOnly: true  },
   { name: 'Financials',    href: '/financials',  icon: Wallet,          adminOnly: true  },
   { name: 'Work',          href: '/work',        icon: ClipboardList,   adminOnly: false },
+  { name: 'Notifications', href: '/notifications',icon: Bell,           adminOnly: false },
   { name: 'Partner Equity',href: '/equity',      icon: Landmark,        adminOnly: true  },
   { name: 'Employees',     href: '/employees',   icon: Users,           adminOnly: true  },
   { name: 'Clients',       href: '/clients',     icon: Users,           adminOnly: false },
@@ -22,6 +24,7 @@ export function Sidebar() {
   const router = useRouter();
   const { currentUser, logout, updatePassword } = useAuth();
   const { isAdmin } = useFinance();
+  const { unreadCount } = useNotifications();
 
   const handleLogout = async () => {
     await logout();
@@ -65,7 +68,12 @@ export function Sidebar() {
               <item.icon
                 className={cn('h-5 w-5 shrink-0 relative z-10', isActive ? 'text-emerald-500' : 'text-zinc-500')}
               />
-              <span className="relative z-10">{item.name}</span>
+              <span className="relative z-10 flex-1">{item.name}</span>
+              {item.name === 'Notifications' && unreadCount > 0 && (
+                <span className="relative z-10 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-black text-white shadow-lg shadow-red-900/20">
+                  {unreadCount}
+                </span>
+              )}
             </Link>
           );
         })}
