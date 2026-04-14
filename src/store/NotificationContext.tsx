@@ -54,18 +54,17 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
     const q = query(
       collection(db, 'notifications'),
-      where('targetUserId', '==', currentUser.id),
-      orderBy('createdAt', 'desc'),
-      limit(20)
+      where('targetUserId', '==', currentUser.id)
     );
 
     const unsub = onSnapshot(q, (snapshot) => {
-      const newNotifs = snapshot.docs.map(d => ({ ...d.data(), id: d.id } as Notification));
+      const newNotifs = snapshot.docs
+        .map(d => ({ ...d.data(), id: d.id } as Notification))
+        .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0))
+        .slice(0, 20);
       
-      // If a new notification arrives that wasn't there before, trigger a toast
       const latestNotif = newNotifs[0];
       if (latestNotif && !latestNotif.isRead) {
-         // Check if it's actually new (not just refreshed)
          const existing = notifications.find(n => n.id === latestNotif.id);
          if (!existing) {
            setToasts(prev => [...prev, latestNotif.message]);
