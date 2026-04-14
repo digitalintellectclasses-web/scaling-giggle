@@ -5,14 +5,15 @@ import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { useNotifications } from './NotificationContext';
 import { useAuth } from './AuthContext';
-import { 
-  collection, 
-  onSnapshot, 
-  doc, 
-  setDoc, 
+import {
+  collection,
+  onSnapshot,
+  doc,
+  setDoc,
   updateDoc,
-  deleteDoc, 
-  query, 
+  getDoc,
+  deleteDoc,
+  query,
   orderBy,
   where,
   limit,
@@ -106,90 +107,90 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-    const startFirestoreListeners = () => {
-      if (unsubRef.current) {
-        unsubRef.current();
-        unsubRef.current = null;
+  const startFirestoreListeners = () => {
+    if (unsubRef.current) {
+      unsubRef.current();
+      unsubRef.current = null;
+    }
+    loadedRef.current = { tx: false, clients: false, equities: false, salaries: false };
+
+    // Master UI Failsafe: If Firestore takes > 3s, show the UI anyway
+    const forceLoadTimeout = setTimeout(() => {
+      if (!isLoaded) {
+        console.warn('⚠️ Firestore slow response - forcing UI display.');
+        setIsLoaded(true);
       }
-      loadedRef.current = { tx: false, clients: false, equities: false, salaries: false };
+    }, 3000);
 
-      // Master UI Failsafe: If Firestore takes > 3s, show the UI anyway
-      const forceLoadTimeout = setTimeout(() => {
-        if (!isLoaded) {
-          console.warn('⚠️ Firestore slow response - forcing UI display.');
-          setIsLoaded(true);
+
+    const unsubTx = onSnapshot(
+      query(collection(db, 'transactions'), orderBy('date', 'desc')),
+      (snapshot) => {
+        setTransactions(snapshot.docs.map(d => ({ ...d.data() as Transaction, id: d.id })));
+        loadedRef.current.tx = true;
+        checkAllLoaded();
+      },
+      (err) => {
+        console.error('Firestore Transactions Error:', err.code);
+        loadedRef.current.tx = true;
+        checkAllLoaded();
+      }
+    );
+
+    const unsubClients = onSnapshot(
+      collection(db, 'clients'),
+      (snapshot) => {
+        setClients(snapshot.docs.map(d => ({ ...d.data() as Client, id: d.id })));
+        loadedRef.current.clients = true;
+        checkAllLoaded();
+      },
+      (err) => {
+        console.error('Firestore Clients Error:', err.code);
+        loadedRef.current.clients = true;
+        checkAllLoaded();
+      }
+    );
+
+    const unsubEquities = onSnapshot(
+      query(collection(db, 'equities'), orderBy('date', 'desc')),
+      (snapshot) => {
+        setEquities(snapshot.docs.map(d => ({ ...d.data() as PartnerEquity, id: d.id })));
+        loadedRef.current.equities = true;
+        checkAllLoaded();
+      },
+      (err) => {
+        console.error('Firestore Equities Error:', err.code);
+        loadedRef.current.equities = true;
+        checkAllLoaded();
+      }
+    );
+
+    const unsubSalaries = onSnapshot(
+      query(collection(db, 'salaries'), orderBy('date', 'desc')),
+      (snapshot) => {
+        setSalaryPayments(snapshot.docs.map(d => ({ ...d.data() as SalaryPayment, id: d.id })));
+        loadedRef.current.salaries = true;
+        checkAllLoaded();
+      },
+      (err) => {
+        console.error('Firestore Salaries Error:', err.code);
+        loadedRef.current.salaries = true;
+        checkAllLoaded();
+      }
+    );
+
+    const unsubReset = onSnapshot(
+      query(collection(db, 'reset_requests'), where('status', '==', 'pending'), limit(1)),
+      (snapshot) => {
+        if (!snapshot.empty) {
+          setActiveResetRequest({ ...snapshot.docs[0].data(), id: snapshot.docs[0].id });
+        } else {
+          setActiveResetRequest(null);
         }
-      }, 3000);
+      }
+    );
 
-
-      const unsubTx = onSnapshot(
-        query(collection(db, 'transactions'), orderBy('date', 'desc')),
-        (snapshot) => {
-          setTransactions(snapshot.docs.map(d => ({ ...d.data() as Transaction, id: d.id })));
-          loadedRef.current.tx = true;
-          checkAllLoaded();
-        },
-        (err) => {
-          console.error('Firestore Transactions Error:', err.code);
-          loadedRef.current.tx = true;
-          checkAllLoaded();
-        }
-      );
-
-      const unsubClients = onSnapshot(
-        collection(db, 'clients'),
-        (snapshot) => {
-          setClients(snapshot.docs.map(d => ({ ...d.data() as Client, id: d.id })));
-          loadedRef.current.clients = true;
-          checkAllLoaded();
-        },
-        (err) => {
-          console.error('Firestore Clients Error:', err.code);
-          loadedRef.current.clients = true;
-          checkAllLoaded();
-        }
-      );
-
-      const unsubEquities = onSnapshot(
-        query(collection(db, 'equities'), orderBy('date', 'desc')),
-        (snapshot) => {
-          setEquities(snapshot.docs.map(d => ({ ...d.data() as PartnerEquity, id: d.id })));
-          loadedRef.current.equities = true;
-          checkAllLoaded();
-        },
-        (err) => {
-          console.error('Firestore Equities Error:', err.code);
-          loadedRef.current.equities = true;
-          checkAllLoaded();
-        }
-      );
-
-      const unsubSalaries = onSnapshot(
-        query(collection(db, 'salaries'), orderBy('date', 'desc')),
-        (snapshot) => {
-          setSalaryPayments(snapshot.docs.map(d => ({ ...d.data() as SalaryPayment, id: d.id })));
-          loadedRef.current.salaries = true;
-          checkAllLoaded();
-        },
-        (err) => {
-          console.error('Firestore Salaries Error:', err.code);
-          loadedRef.current.salaries = true;
-          checkAllLoaded();
-        }
-      );
-
-      const unsubReset = onSnapshot(
-        query(collection(db, 'reset_requests'), where('status', '==', 'pending'), limit(1)),
-        (snapshot) => {
-          if (!snapshot.empty) {
-            setActiveResetRequest({ ...snapshot.docs[0].data(), id: snapshot.docs[0].id });
-          } else {
-            setActiveResetRequest(null);
-          }
-        }
-      );
-
-      unsubRef.current = () => {
+    unsubRef.current = () => {
       clearTimeout(forceLoadTimeout);
       unsubTx();
       unsubClients();
@@ -260,9 +261,9 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const addTransaction = async (tx: Omit<Transaction, 'id'>) => {
     if (!auth.currentUser) return;
     const id = crypto.randomUUID();
-    try { 
-      await setDoc(doc(db, 'transactions', id), { ...tx, id }); 
-      
+    try {
+      await setDoc(doc(db, 'transactions', id), { ...tx, id });
+
       // Notify other owner(s)
       const otherAdmins = users.filter(u => u.role === 'admin' && u.id !== currentUser?.id);
       for (const admin of otherAdmins) {
@@ -335,69 +336,96 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
   const requestGlobalReset = async () => {
     if (!currentUser || !isAdmin) return;
-    const requestId = crypto.randomUUID();
-    const adminCount = users.filter(u => u.role === 'admin').length;
-    
-    await setDoc(doc(db, 'reset_requests', requestId), {
-      id: requestId,
-      requestedBy: currentUser.id,
-      requestedByName: currentUser.displayName,
-      approvals: [currentUser.id],
-      status: 'pending',
-      createdAt: Timestamp.now(),
-      requiredApprovals: adminCount
-    });
+    const confirm = window.confirm("Executing this will notify ALL other admins. They must approve before the wipe happens. Proceed?");
+    if (!confirm) return;
 
-    // Notify other admins
-    const otherAdmins = users.filter(u => u.role === 'admin' && u.id !== currentUser.id);
-    for (const admin of otherAdmins) {
-      await addNotification({
-        type: 'reset_request',
-        message: `${currentUser.displayName} is requesting a FULL SYSTEM RESET. Approval required.`,
-        targetUserId: admin.id,
-        resetRequestId: requestId,
-        status: 'pending'
+    try {
+      const requestId = crypto.randomUUID();
+      const adminCount = users.filter(u => u.role === 'admin').length;
+      
+      await setDoc(doc(db, 'reset_requests', requestId), {
+        id: requestId,
+        requestedBy: currentUser.id,
+        requestedByName: currentUser.displayName,
+        approvals: [currentUser.id],
+        status: 'pending',
+        createdAt: Timestamp.now(),
+        requiredApprovals: adminCount
       });
+
+      // Notify other admins
+      const otherAdmins = users.filter(u => u.role === 'admin' && u.id !== currentUser.id);
+      for (const admin of otherAdmins) {
+        await addNotification({
+          type: 'reset_request',
+          message: `${currentUser.displayName} is requesting a FULL SYSTEM RESET. Approval required.`,
+          targetUserId: admin.id,
+          resetRequestId: requestId,
+          status: 'pending'
+        });
+      }
+      alert("✅ Reset request sent to all admins.");
+    } catch (err: any) {
+      console.error("Reset Request Failed:", err);
+      if (err.code === 'permission-denied') {
+        alert("❌ MISSION FAILED: Firestore Permission Denied. Your administrator must update the Firestore Security Rules.");
+      } else {
+        alert("❌ Error: " + err.message);
+      }
     }
   };
 
   const acceptResetRequest = async (requestId: string, notificationId: string) => {
     if (!currentUser || !isAdmin) return;
-    
-    // 1. Get current request
-    const reqRef = doc(db, 'reset_requests', requestId);
-    const snap = await (await import('firebase/firestore')).getDoc(reqRef);
-    if (!snap.exists()) return;
-    
-    const data = snap.data();
-    if (data.approvals.includes(currentUser.id)) return;
 
-    const newApprovals = [...data.approvals, currentUser.id];
-    const isFullyApproved = newApprovals.length >= data.requiredApprovals;
+    try {
+      // 1. Get current request
+      const reqRef = doc(db, 'reset_requests', requestId);
+      const snap = await getDoc(reqRef);
+      if (!snap.exists()) return;
 
-    await updateDoc(reqRef, {
-      approvals: newApprovals,
-      status: isFullyApproved ? 'approved' : 'pending'
-    });
+      const data = snap.data();
+      if (data.approvals.includes(currentUser.id)) {
+        alert("You have already approved this request.");
+        return;
+      }
 
-    // Mark current notification as approved
-    const { updateNotificationStatus } = (await import('./NotificationContext')).useNotifications();
-    // Wait, I can't call hooks inside functions. 
-    // I should use the notification prop or update it directly via Firestore.
-    await updateDoc(doc(db, 'notifications', notificationId), { status: 'approved', isRead: true });
+      const newApprovals = [...data.approvals, currentUser.id];
+      const isFullyApproved = newApprovals.length >= data.requiredApprovals;
 
-    if (isFullyApproved) {
-      await executeFullWipe();
-      await updateDoc(reqRef, { status: 'completed' });
+      await updateDoc(reqRef, {
+        approvals: newApprovals,
+        status: isFullyApproved ? 'approved' : 'pending'
+      });
+
+      // Mark current notification as approved
+      await updateDoc(doc(db, 'notifications', notificationId), { 
+        status: 'approved', 
+        isRead: true 
+      });
+
+      if (isFullyApproved) {
+        await executeFullWipe();
+        await updateDoc(reqRef, { status: 'completed' });
+        alert("🔥 SYSTEM DATA WIPE COMPLETE.");
+      } else {
+        alert("✅ Approval registered. More approvals needed.");
+      }
+    } catch (err: any) {
+       console.error("Approval Failed:", err);
+       if (err.code === 'permission-denied') {
+         alert("❌ Permission Denied by Firestore Rules.");
+       }
     }
   };
 
   return (
-    <FinanceContext.Provider value={{ 
+    <FinanceContext.Provider value={{
       transactions, clients, equities, salaryPayments, isAdmin,
       addTransaction, addClient, addEquity, addSalaryPayment, deleteSalaryPayment,
       deleteTransaction, deleteClient, setIsAdmin, isLoaded,
       requestGlobalReset, acceptResetRequest, activeResetRequest
+
     }}>
       {children}
     </FinanceContext.Provider>
