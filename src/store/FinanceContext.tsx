@@ -334,13 +334,28 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   };
 
   const executeFullWipe = async () => {
-    const batch = writeBatch(db);
-    transactions.forEach(t => batch.delete(doc(db, 'transactions', t.id)));
-    clients.forEach(c => batch.delete(doc(db, 'clients', c.id)));
-    equities.forEach(e => batch.delete(doc(db, 'equities', e.id)));
-    salaryPayments.forEach(s => batch.delete(doc(db, 'salaries', s.id)));
-    await batch.commit();
-    console.log('🔥 SYSTEM WIPE COMPLETE');
+    const { getDocs } = await import('firebase/firestore');
+
+    // Query each collection directly from Firestore — never rely on state arrays
+    // because the approving user may not have loaded them in their session.
+    const [txSnap, clientSnap, equitySnap, salarySnap] = await Promise.all([
+      getDocs(collection(db, 'transactions')),
+      getDocs(collection(db, 'clients')),
+      getDocs(collection(db, 'equities')),
+      getDocs(collection(db, 'salaries')),
+    ]);
+
+    // Firestore batches are limited to 500 writes — split into chunks
+    const allDocs = [...txSnap.docs, ...clientSnap.docs, ...equitySnap.docs, ...salarySnap.docs];
+    
+    const chunkSize = 490;
+    for (let i = 0; i < allDocs.length; i += chunkSize) {
+      const batch = writeBatch(db);
+      allDocs.slice(i, i + chunkSize).forEach(d => batch.delete(d.ref));
+      await batch.commit();
+    }
+
+    console.log(`🔥 SYSTEM WIPE COMPLETE — ${allDocs.length} documents deleted.`);
   };
 
   const requestGlobalReset = async () => {
