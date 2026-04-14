@@ -107,6 +107,15 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Synchronize internal admin state with our reliable currentUser role
+  useEffect(() => {
+    if (currentUser) {
+      setIsAdmin(currentUser.role === 'admin');
+    } else {
+      setIsAdmin(false);
+    }
+  }, [currentUser]);
+
   const startFirestoreListeners = () => {
     if (unsubRef.current) {
       unsubRef.current();
@@ -425,7 +434,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       addTransaction, addClient, addEquity, addSalaryPayment, deleteSalaryPayment,
       deleteTransaction, deleteClient, setIsAdmin, isLoaded,
       requestGlobalReset, acceptResetRequest, activeResetRequest
-
     }}>
       {children}
     </FinanceContext.Provider>
