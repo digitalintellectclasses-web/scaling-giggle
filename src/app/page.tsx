@@ -21,12 +21,18 @@ export default function Dashboard() {
   const { users, createEmployee } = useAuth();
   const router = useRouter();
 
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+
   const handleRequestReset = async () => {
-    const confirm = window.confirm("Requesting a system-wide reset will alert all other admins. Proceed?");
-    if (confirm) {
-      await requestGlobalReset();
-      alert("Reset request sent to other administrators.");
-    }
+    setShowResetModal(true);
+  };
+
+  const confirmReset = async () => {
+    setIsResetting(true);
+    setShowResetModal(false);
+    await requestGlobalReset();
+    setIsResetting(false);
   };
 
   // Employee creation form state
@@ -169,6 +175,41 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6 pb-20">
+      {/* Reset Confirmation Modal */}
+      {showResetModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="bg-zinc-900 border border-red-500/30 rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl shadow-red-900/20">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-12 h-12 rounded-xl bg-red-500/10 flex items-center justify-center">
+                <ShieldAlert className="w-6 h-6 text-red-500" />
+              </div>
+              <div>
+                <h2 className="text-white font-bold text-lg">Request Global Reset</h2>
+                <p className="text-zinc-400 text-sm">This cannot be undone</p>
+              </div>
+            </div>
+            <p className="text-zinc-300 text-sm mb-6 leading-relaxed">
+              This will send an approval request to all other administrators. Once <strong>all admins approve</strong>, every transaction, salary, client and equity record will be permanently deleted.
+            </p>
+            <div className="flex gap-3">
+              <button
+                id="confirm-reset-btn"
+                onClick={confirmReset}
+                className="flex-1 py-3 bg-red-600 hover:bg-red-500 text-white rounded-xl font-bold text-sm transition-all"
+              >
+                Yes, Request Reset
+              </button>
+              <button
+                onClick={() => setShowResetModal(false)}
+                className="flex-1 py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl font-bold text-sm transition-all"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Admin Dashboard</h1>

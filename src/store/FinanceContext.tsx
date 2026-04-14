@@ -345,8 +345,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
   const requestGlobalReset = async () => {
     if (!currentUser || !isAdmin) return;
-    const confirm = window.confirm("Executing this will notify ALL other admins. They must approve before the wipe happens. Proceed?");
-    if (!confirm) return;
 
     try {
       const requestId = crypto.randomUUID();

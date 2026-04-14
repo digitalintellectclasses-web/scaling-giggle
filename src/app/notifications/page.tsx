@@ -14,11 +14,7 @@ export default function NotificationsPage() {
 
   const handleAcceptReset = async (notif: any) => {
     if (!notif.resetRequestId) return;
-    const confirm = window.confirm("ARE YOU SURE? This will PERMANENTLY DELETE ALL transaction, salary, equity, and client data from the entire system.");
-    if (confirm) {
-      await acceptResetRequest(notif.resetRequestId, notif.id);
-      alert("System Reset Executed.");
-    }
+    await acceptResetRequest(notif.resetRequestId, notif.id);
   };
 
   const handleDeclineReset = async (notif: any) => {
