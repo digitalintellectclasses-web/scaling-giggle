@@ -8,6 +8,7 @@ import { LoginPage } from '@/components/LoginPage';
 import { Sidebar } from '@/components/Sidebar';
 import { MobileNav } from '@/components/MobileNav';
 import { NotificationBell } from '@/components/NotificationBell';
+import { FirebaseIndicator } from '@/components/FirebaseIndicator';
 import { LogOut, Bell, Key } from 'lucide-react';
 
 /**
@@ -66,6 +67,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <span className="text-sm font-bold tracking-tight text-white uppercase italic">Finance</span>
           </div>
           <div className="flex items-center gap-2">
+             <FirebaseIndicator variant="header" />
              <button
                onClick={async () => {
                  const pass = prompt('Enter new password (min 6 characters):');

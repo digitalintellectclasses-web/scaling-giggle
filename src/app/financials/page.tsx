@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useFinance } from '@/store/FinanceContext';
-import { Plus, Trash2, IndianRupee, Wallet } from 'lucide-react';
+import { Plus, Trash2, IndianRupee, Wallet, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 
 const formatINR = (amount: number) => {
@@ -10,7 +10,7 @@ const formatINR = (amount: number) => {
 };
 
 export default function FinancialTracking() {
-  const { transactions, addTransaction, deleteTransaction, isAdmin, isLoaded } = useFinance();
+  const { transactions, transactionRequests, requestTransaction, deleteTransaction, isAdmin, isLoaded } = useFinance();
   
   const [type, setType] = useState<'income' | 'expense'>('income');
   const [amount, setAmount] = useState('');
@@ -34,7 +34,7 @@ export default function FinancialTracking() {
     setDescription('');
 
     try {
-      await addTransaction({
+      await requestTransaction({
         type,
         amount: Number(amount),
         category,
@@ -179,17 +179,51 @@ export default function FinancialTracking() {
               type="submit"
               className="w-full mt-6 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-lg font-medium transition-all shadow-lg shadow-emerald-900/20"
             >
-              <Plus className="h-5 w-5" /> Add Transaction
+              <Plus className="h-5 w-5" /> Submit for Approval
             </button>
 
           </form>
         </div>
 
         {/* Ledger */}
-        <div className="col-span-1 xl:col-span-3 border border-zinc-800 bg-zinc-900/40 rounded-2xl p-6 overflow-hidden flex flex-col h-[700px]">
-          <h2 className="text-xl font-semibold text-white mb-6">Recent Transactions</h2>
+        <div className="col-span-1 xl:col-span-3 space-y-8 overflow-hidden flex flex-col h-[800px]">
           
-          <div className="flex-1 overflow-y-auto pr-2 space-y-3">
+          {/* Pending Requests Section */}
+          {transactionRequests.length > 0 && (
+            <div className="border border-emerald-500/20 bg-emerald-500/5 rounded-2xl p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center">
+                  <Clock className="w-4 h-4 text-emerald-400 animate-pulse" />
+                </div>
+                <h2 className="text-xl font-semibold text-white">Pending Confirmation</h2>
+              </div>
+              <div className="space-y-3">
+                {transactionRequests.map((req: any) => (
+                  <div key={req.id} className="flex items-center justify-between p-4 bg-zinc-900/50 border border-emerald-500/10 rounded-xl">
+                    <div className="flex flex-col">
+                      <span className="text-white font-medium">{req.proposedTransaction.description}</span>
+                      <span className="text-[10px] text-zinc-400 uppercase tracking-wider">
+                        BY {req.requestedByName} • {req.proposedTransaction.category}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <span className="text-emerald-400 font-bold">
+                        {req.proposedTransaction.type === 'income' ? '+' : '-'}{formatINR(req.proposedTransaction.amount)}
+                      </span>
+                      <div className="px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-[10px] text-emerald-400 font-bold animate-pulse">
+                        AWAITING ADMIN
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="border border-zinc-800 bg-zinc-900/40 rounded-2xl p-6 flex-1 overflow-hidden flex flex-col">
+            <h2 className="text-xl font-semibold text-white mb-6">Recent Transactions</h2>
+            
+            <div className="flex-1 overflow-y-auto pr-2 space-y-3">
              {transactions.length === 0 ? (
                <div className="h-full flex flex-col items-center justify-center text-zinc-500">
                  <IndianRupee className="h-12 w-12 mb-4 opacity-20" />
@@ -228,5 +262,6 @@ export default function FinancialTracking() {
 
       </div>
     </div>
+  </div>
   );
 }

@@ -3,13 +3,13 @@
 import { useNotifications } from '@/store/NotificationContext';
 import { useFinance } from '@/store/FinanceContext';
 import { useAuth } from '@/store/AuthContext';
-import { Bell, CheckCircle2, XCircle, Trash2, ShieldAlert, Clock, MessageSquare, CheckSquare, AlertTriangle } from 'lucide-react';
+import { Bell, CheckCircle2, XCircle, Trash2, ShieldAlert, Clock, MessageSquare, CheckSquare, AlertTriangle, IndianRupee } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
 export default function NotificationsPage() {
   const { notifications, markAsRead, updateNotificationStatus } = useNotifications();
-  const { acceptResetRequest, isAdmin } = useFinance();
+  const { acceptResetRequest, approveTransaction, rejectTransaction, isAdmin } = useFinance();
   const { currentUser } = useAuth();
 
   const handleAcceptReset = async (notif: any) => {
@@ -61,10 +61,12 @@ export default function NotificationsPage() {
                   "w-12 h-12 rounded-xl flex items-center justify-center shrink-0 shadow-inner",
                   notif.type === 'reset_request' ? "bg-red-500/10 text-red-400" :
                   notif.type === 'work' ? "bg-blue-500/10 text-blue-400" :
+                  notif.type === 'transaction_request' ? "bg-emerald-500/10 text-emerald-400" :
                   "bg-emerald-500/10 text-emerald-400"
                 )}>
                   {notif.type === 'reset_request' ? <AlertTriangle className="w-6 h-6" /> :
                    notif.type === 'work' ? <CheckSquare className="w-6 h-6" /> :
+                   notif.type === 'transaction_request' ? <IndianRupee className="w-6 h-6" /> :
                    <MessageSquare className="w-6 h-6" />}
                 </div>
 
@@ -112,6 +114,25 @@ export default function NotificationsPage() {
                        </button>
                        <button 
                          onClick={() => handleDeclineReset(notif)}
+                         className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 rounded-lg text-xs font-bold transition-all"
+                       >
+                         Decline
+                       </button>
+                    </div>
+                  )}
+
+                  {/* Actions for Transaction Requests */}
+                  {notif.type === 'transaction_request' && notif.status === 'pending' && (
+                    <div className="flex items-center gap-3 pt-2">
+                       <button 
+                         onClick={() => approveTransaction(notif.transactionRequestId!, notif.id)}
+                         className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition-all"
+                       >
+                         <CheckCircle2 className="w-4 h-4" />
+                         Approve Entry
+                       </button>
+                       <button 
+                         onClick={() => rejectTransaction(notif.transactionRequestId!, notif.id)}
                          className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 rounded-lg text-xs font-bold transition-all"
                        >
                          Decline

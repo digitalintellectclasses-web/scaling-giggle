@@ -8,6 +8,7 @@ import { motion } from 'framer-motion';
 import { useAuth } from '@/store/AuthContext';
 import { useFinance } from '@/store/FinanceContext';
 import { useNotifications } from '@/store/NotificationContext';
+import { FirebaseIndicator } from '@/components/FirebaseIndicator';
 
 const navigation = [
   { name: 'Dashboard',     href: '/',            icon: LayoutDashboard, adminOnly: true  },
@@ -79,8 +80,10 @@ export function Sidebar() {
         })}
       </nav>
 
-      {/* Footer: User card + Logout */}
+      {/* Footer: Firebase indicator + User card + Logout */}
       <div className="p-4 space-y-3 border-t border-zinc-800/50">
+        {/* Firebase Status */}
+        <FirebaseIndicator variant="sidebar" />
         {/* Logged-in user */}
         <div className="flex items-center gap-3 rounded-xl bg-zinc-900/60 border border-zinc-800 px-4 py-3">
           <div className={cn(

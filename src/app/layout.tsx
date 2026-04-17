@@ -5,6 +5,7 @@ import { FinanceProvider } from '@/store/FinanceContext';
 import { AuthProvider } from '@/store/AuthContext';
 import { NotificationProvider } from '@/store/NotificationContext';
 import { WorkProvider } from '@/store/WorkContext';
+import { FirebaseStatusProvider } from '@/store/FirebaseStatusContext';
 import { AppShell } from '@/components/AppShell';
 
 const geistSans = Geist({
@@ -34,15 +35,17 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body suppressHydrationWarning className="min-h-full bg-[#09090b] text-zinc-100 overflow-hidden">
-        <AuthProvider>
-          <NotificationProvider>
-            <WorkProvider>
-              <FinanceProvider>
-                <AppShell>{children}</AppShell>
-              </FinanceProvider>
-            </WorkProvider>
-          </NotificationProvider>
-        </AuthProvider>
+        <FirebaseStatusProvider>
+          <AuthProvider>
+            <NotificationProvider>
+              <WorkProvider>
+                <FinanceProvider>
+                  <AppShell>{children}</AppShell>
+                </FinanceProvider>
+              </WorkProvider>
+            </NotificationProvider>
+          </AuthProvider>
+        </FirebaseStatusProvider>
       </body>
     </html>
   );

@@ -65,6 +65,7 @@ export type SalaryPayment = {
 
 type FinanceContextType = {
   transactions: Transaction[];
+  transactionRequests: any[];
   clients: Client[];
   equities: PartnerEquity[];
   salaryPayments: SalaryPayment[];
@@ -80,6 +81,9 @@ type FinanceContextType = {
   isLoaded: boolean;
   requestGlobalReset: () => Promise<void>;
   acceptResetRequest: (requestId: string, notificationId: string) => Promise<void>;
+  requestTransaction: (tx: Omit<Transaction, 'id'>) => Promise<void>;
+  approveTransaction: (requestId: string, notificationId: string) => Promise<void>;
+  rejectTransaction: (requestId: string, notificationId: string) => Promise<void>;
   activeResetRequest: any;
 };
 
@@ -95,6 +99,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const [activeResetRequest, setActiveResetRequest] = useState<any>(null);
+  const [transactionRequests, setTransactionRequests] = useState<any[]>([]);
 
   const loadedRef = useRef({ tx: false, clients: false, equities: false, salaries: false });
   // Track the active Firestore unsub functions so we can restart them if needed
@@ -199,6 +204,13 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       }
     );
 
+    const unsubRequests = onSnapshot(
+      query(collection(db, 'transaction_requests'), where('status', '==', 'pending')),
+      (snapshot) => {
+        setTransactionRequests(snapshot.docs.map(d => ({ ...d.data(), id: d.id })));
+      }
+    );
+
     unsubRef.current = () => {
       clearTimeout(forceLoadTimeout);
       unsubTx();
@@ -206,6 +218,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       unsubEquities();
       unsubSalaries();
       unsubReset();
+      unsubRequests();
     };
   };
 
@@ -441,12 +454,97 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const requestTransaction = async (tx: Omit<Transaction, 'id'>) => {
+    if (!currentUser || !isAdmin) return;
+    
+    try {
+      const requestId = crypto.randomUUID();
+      await setDoc(doc(db, 'transaction_requests', requestId), {
+        id: requestId,
+        proposedTransaction: tx,
+        requestedBy: currentUser.id,
+        requestedByName: currentUser.displayName,
+        status: 'pending',
+        createdAt: Timestamp.now()
+      });
+
+      // Notify other admins
+      const otherAdmins = users.filter(u => u.role === 'admin' && u.id !== currentUser.id);
+      for (const admin of otherAdmins) {
+        await addNotification({
+          type: 'transaction_request',
+          message: `${currentUser.displayName} is requesting to add a ${tx.type}: ${tx.description} (${tx.type === 'income' ? '+' : '-'}${tx.amount})`,
+          targetUserId: admin.id,
+          transactionRequestId: requestId,
+          status: 'pending'
+        });
+      }
+      alert("✅ Transaction request sent for approval.");
+    } catch (err: any) {
+      console.error("Transaction Request Failed:", err);
+      alert("❌ Error: " + err.message);
+    }
+  };
+
+  const approveTransaction = async (requestId: string, notificationId: string) => {
+    if (!currentUser || !isAdmin) return;
+
+    try {
+      const reqRef = doc(db, 'transaction_requests', requestId);
+      const snap = await getDoc(reqRef);
+      if (!snap.exists()) return;
+
+      const data = snap.data();
+      if (data.status !== 'pending') {
+        alert("This request has already been processed.");
+        return;
+      }
+
+      // 1. Add the actual transaction
+      const txId = crypto.randomUUID();
+      await setDoc(doc(db, 'transactions', txId), { 
+        ...data.proposedTransaction, 
+        id: txId 
+      });
+
+      // 2. Update request status
+      await updateDoc(reqRef, { status: 'approved' });
+
+      // 3. Update notification status
+      await updateDoc(doc(db, 'notifications', notificationId), { 
+        status: 'approved', 
+        isRead: true 
+      });
+
+      alert("✅ Transaction approved and added.");
+    } catch (err: any) {
+      console.error("Approval Failed:", err);
+      alert("❌ Error: " + err.message);
+    }
+  };
+
+  const rejectTransaction = async (requestId: string, notificationId: string) => {
+    if (!currentUser || !isAdmin) return;
+
+    try {
+      await updateDoc(doc(db, 'transaction_requests', requestId), { status: 'rejected' });
+      await updateDoc(doc(db, 'notifications', notificationId), { 
+        status: 'rejected', 
+        isRead: true 
+      });
+      alert("❌ Transaction request rejected.");
+    } catch (err: any) {
+      console.error("Rejection Failed:", err);
+    }
+  };
+
   return (
     <FinanceContext.Provider value={{
-      transactions, clients, equities, salaryPayments, isAdmin,
+      transactions, transactionRequests, clients, equities, salaryPayments, isAdmin,
       addTransaction, addClient, addEquity, addSalaryPayment, deleteSalaryPayment,
       deleteTransaction, deleteClient, setIsAdmin, isLoaded,
-      requestGlobalReset, acceptResetRequest, activeResetRequest
+      requestGlobalReset, acceptResetRequest, activeResetRequest,
+      requestTransaction, approveTransaction, rejectTransaction
     }}>
       {children}
     </FinanceContext.Provider>
