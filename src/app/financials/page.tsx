@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useFinance } from '@/store/FinanceContext';
 import { Plus, Trash2, IndianRupee, Wallet } from 'lucide-react';
 import { format } from 'date-fns';
@@ -16,14 +16,16 @@ export default function FinancialTracking() {
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('Service Retainer');
   const [description, setDescription] = useState('');
-  // Fix: use local date string (not UTC) to avoid off-by-one day in IST and other UTC+ zones
-  const [date, setDate] = useState(() => {
+  // Always set from client-side local clock after hydration to avoid UTC server date
+  const [date, setDate] = useState('');
+
+  useEffect(() => {
     const now = new Date();
     const y = now.getFullYear();
     const m = String(now.getMonth() + 1).padStart(2, '0');
     const d = String(now.getDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
-  });
+    setDate(`${y}-${m}-${d}`);
+  }, []);
   
   // New Admin Fields
   const [managedBy, setManagedBy] = useState<'Pratik' | 'Pranav'>('Pratik');

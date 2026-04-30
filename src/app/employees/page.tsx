@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '@/store/AuthContext';
 import { useFinance } from '@/store/FinanceContext';
 import {
@@ -62,10 +62,19 @@ export default function EmployeesPage() {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
-  const [salDate, setSalDate] = useState(new Date().toISOString().split('T')[0]);
+  const [salDate, setSalDate] = useState('');
   const [salPaidBy, setSalPaidBy] = useState<'Pratik' | 'Pranav'>('Pratik');
   const [salMethod, setSalMethod] = useState<'cash' | 'online'>('online');
   const [salNote, setSalNote] = useState('');
+
+  // Set from client local clock after hydration — avoids UTC date being 1 day behind in IST
+  useEffect(() => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    setSalDate(`${y}-${m}-${d}`);
+  }, []);
   const [salSuccess, setSalSuccess] = useState('');
 
   const handleAddSalary = async (e: React.FormEvent) => {
