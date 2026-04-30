@@ -2,19 +2,26 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Wallet, Users, Landmark, ClipboardList, Bell, Settings } from 'lucide-react';
+import { 
+  LayoutDashboard, Wallet, Users, Landmark, LogOut, ShieldCheck, 
+  ClipboardList, Bell, Menu, X, Settings,
+  Building2, Activity, BookOpen, FileText, Component
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { useFinance } from '@/store/FinanceContext';
 import { useNotifications } from '@/store/NotificationContext';
 
 const navigation = [
-  { name: 'Home',          href: '/',            icon: LayoutDashboard, adminOnly: true  },
-  { name: 'Finance',       href: '/financials',  icon: Wallet,          adminOnly: true  },
-  { name: 'Work',          href: '/work',        icon: ClipboardList,   adminOnly: false },
-  { name: 'Notifications', href: '/notifications',icon: Bell,           adminOnly: false },
-  { name: 'Equity',        href: '/equity',      icon: Landmark,        adminOnly: true  },
-  { name: 'Team',          href: '/employees',   icon: Users,           adminOnly: true  },
+  { name: 'Dashboard',       href: '/',              icon: LayoutDashboard, adminOnly: true  },
+  { name: 'Financials',      href: '/financials',    icon: Wallet,          adminOnly: true  },
+  { name: 'Work',            href: '/work',          icon: ClipboardList,   adminOnly: false },
+  { name: 'Notifications',   href: '/notifications', icon: Activity,        adminOnly: false },
+  { name: 'Books (Reports)', href: '/books',         icon: BookOpen,        adminOnly: true  },
+  { name: 'Quotations',      href: '/quotations',    icon: FileText,        adminOnly: false },
+  { name: 'Services',        href: '/services',      icon: Component,       adminOnly: true  },
+  { name: 'Partner Equity',  href: '/equity',        icon: Building2,       adminOnly: true  },
+  { name: 'Employees',       href: '/employees',     icon: Users,           adminOnly: true  },
   { name: 'Clients',       href: '/clients',     icon: Users,           adminOnly: false },
   { name: 'Settings',      href: '/settings',    icon: Settings,        adminOnly: true  },
 ];

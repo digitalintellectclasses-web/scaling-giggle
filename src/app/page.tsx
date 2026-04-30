@@ -293,7 +293,7 @@ export default function Dashboard() {
           {dailyInsights.length > 0 ? (
             <div className="h-[300px] w-full mt-4" style={{ minHeight: 300 }}>
               <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={dailyInsights} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+                <BarChart data={dailyInsights} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
                   <XAxis dataKey="day" stroke="#52525b" fontSize={12} tickLine={false} axisLine={false} />
                   <YAxis stroke="#52525b" fontSize={10} tickLine={false} axisLine={false} tickFormatter={v => v === 0 ? '' : `₹${(v/1000).toFixed(0)}k`} />
                   <Tooltip 
@@ -302,10 +302,10 @@ export default function Dashboard() {
                     formatter={(val: number) => [`₹${val.toLocaleString('en-IN')}`, undefined]}
                   />
                   <CartesianGrid stroke="#27272a" strokeDasharray="3 3" vertical={false} />
-                  <Line type="monotone" dataKey="Net" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4, fill: '#09090b', strokeWidth: 2 }} activeDot={{ r: 6 }} />
-                  <Line type="monotone" dataKey="Income" stroke="#10b981" strokeWidth={2} dot={false} strokeOpacity={0.5} />
-                  <Line type="monotone" dataKey="Expenses" stroke="#ef4444" strokeWidth={2} dot={false} strokeOpacity={0.5} />
-                </LineChart>
+                  <Bar dataKey="Income" fill="#10b981" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="Expenses" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="Net" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                </BarChart>
               </ResponsiveContainer>
             </div>
           ) : (

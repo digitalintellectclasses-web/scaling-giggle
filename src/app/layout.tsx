@@ -5,6 +5,7 @@ import { FinanceProvider } from '@/store/FinanceContext';
 import { AuthProvider } from '@/store/AuthContext';
 import { NotificationProvider } from '@/store/NotificationContext';
 import { WorkProvider } from '@/store/WorkContext';
+import { QuoteProvider } from '@/store/QuoteContext';
 import { FirebaseStatusProvider } from '@/store/FirebaseStatusContext';
 import { AppShell } from '@/components/AppShell';
 
@@ -40,7 +41,9 @@ export default function RootLayout({
             <NotificationProvider>
               <WorkProvider>
                 <FinanceProvider>
-                  <AppShell>{children}</AppShell>
+                  <QuoteProvider>
+                    <AppShell>{children}</AppShell>
+                  </QuoteProvider>
                 </FinanceProvider>
               </WorkProvider>
             </NotificationProvider>
