@@ -48,7 +48,7 @@ type WorkContextType = {
 const WorkContext = createContext<WorkContextType | undefined>(undefined);
 
 export function WorkProvider({ children }: { children: React.ReactNode }) {
-  const { currentUser } = useAuth();
+  const { currentUser, users } = useAuth();
   const { addNotification } = useNotifications();
   const [tasks, setTasks] = useState<Task[]>([]);
 
@@ -99,20 +99,63 @@ export function WorkProvider({ children }: { children: React.ReactNode }) {
       history: arrayUnion(historyItem)
     });
 
-    // If completed, notify the creator (admin)
     const task = tasks.find(t => t.id === id);
-    if (task && status === 'completed') {
+    if (!task) return;
+
+    const statusLabel: Record<TaskStatus, string> = {
+      'pending': '⏳ Pending',
+      'in-progress': '🔄 In Progress',
+      'completed': '✅ Completed',
+    };
+
+    // Notify the task creator if not the one updating
+    if (task.createdBy !== currentUser?.id) {
       await addNotification({
         type: 'work',
-        message: `Task completed by ${task.assignedToName}: ${task.title}`,
+        message: `${statusLabel[status]}: "${task.title}" updated by ${currentUser?.displayName ?? task.assignedToName}`,
         targetUserId: task.createdBy,
+        relatedId: id
+      });
+    }
+
+    // Notify all other admins who are neither the updater nor already the creator
+    const allAdmins = users.filter(
+      u => u.role === 'admin' && u.id !== currentUser?.id && u.id !== task.createdBy
+    );
+    for (const admin of allAdmins) {
+      await addNotification({
+        type: 'work',
+        message: `${statusLabel[status]}: Task "${task.title}" (assigned to ${task.assignedToName}) — updated by ${currentUser?.displayName}`,
+        targetUserId: admin.id,
+        relatedId: id
+      });
+    }
+
+    // Notify the assigned employee if an admin changed the status
+    if (currentUser?.role === 'admin' && task.assignedTo !== currentUser?.id) {
+      await addNotification({
+        type: 'work',
+        message: `${statusLabel[status]}: Your task "${task.title}" was marked ${status} by ${currentUser?.displayName}`,
+        targetUserId: task.assignedTo,
         relatedId: id
       });
     }
   };
 
   const deleteTask = async (id: string) => {
+    const task = tasks.find(t => t.id === id);
     await deleteDoc(doc(db, 'tasks', id));
+    if (task && currentUser) {
+      const allAdmins = users.filter(u => u.role === 'admin' && u.id !== currentUser.id);
+      for (const admin of allAdmins) {
+        await addNotification({
+          type: 'work',
+          message: `🗑️ ${currentUser.displayName} deleted task: "${task.title}" (was assigned to ${task.assignedToName})`,
+          targetUserId: admin.id,
+          relatedId: id
+        });
+      }
+    }
   };
 
   return (

@@ -286,12 +286,12 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     try {
       await setDoc(doc(db, 'transactions', id), { ...tx, id });
 
-      // Notify other owner(s)
+      // Notify ALL other admins immediately — no approval needed
       const otherAdmins = users.filter(u => u.role === 'admin' && u.id !== currentUser?.id);
       for (const admin of otherAdmins) {
         await addNotification({
           type: 'transaction',
-          message: `${currentUser?.displayName} added transaction: ${tx.description} (${tx.type === 'income' ? '+' : '-'}${tx.amount})`,
+          message: `💰 ${currentUser?.displayName} added a ${tx.type}: "${tx.description}" — ${tx.type === 'income' ? '+' : '-'}₹${tx.amount} (${tx.paymentMethod}, ${tx.managedBy})`,
           targetUserId: admin.id,
           relatedId: id
         });
@@ -303,18 +303,25 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const addClient = async (client: Omit<Client, 'id'>) => {
     const id = crypto.randomUUID();
     await setDoc(doc(db, 'clients', id), { ...client, id });
+    const otherAdmins = users.filter(u => u.role === 'admin' && u.id !== currentUser?.id);
+    for (const admin of otherAdmins) {
+      await addNotification({
+        type: 'system',
+        message: `🤝 ${currentUser?.displayName} added a new client: "${client.name}"`,
+        targetUserId: admin.id,
+        relatedId: id
+      });
+    }
   };
 
   const addEquity = async (equity: Omit<PartnerEquity, 'id'>) => {
     const id = crypto.randomUUID();
     await setDoc(doc(db, 'equities', id), { ...equity, id });
-
-    // Notify other owner
     const otherAdmins = users.filter(u => u.role === 'admin' && u.id !== currentUser?.id);
     for (const admin of otherAdmins) {
       await addNotification({
         type: 'transaction',
-        message: `${currentUser?.displayName} updated Equity: ${equity.type} (${equity.amount})`,
+        message: `📊 ${currentUser?.displayName} recorded a partner equity ${equity.type}: ₹${equity.amount} (${equity.partnerId})`,
         targetUserId: admin.id,
         relatedId: id
       });
@@ -324,14 +331,23 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const addSalaryPayment = async (sp: Omit<SalaryPayment, 'id'>) => {
     const id = crypto.randomUUID();
     await setDoc(doc(db, 'salaries', id), { ...sp, id });
-
-    // Notify employee
+    // Notify the employee
     await addNotification({
       type: 'transaction',
-      message: `Salary payment received: ${sp.month} (${sp.amount})`,
+      message: `💸 Salary paid for ${sp.month}: ₹${sp.amount} by ${sp.paidBy} (${sp.paymentMethod})`,
       targetUserId: sp.employeeUserId,
       relatedId: id
     });
+    // Notify other admins
+    const otherAdmins = users.filter(u => u.role === 'admin' && u.id !== currentUser?.id);
+    for (const admin of otherAdmins) {
+      await addNotification({
+        type: 'transaction',
+        message: `💸 ${currentUser?.displayName} paid salary to ${sp.employeeName}: ₹${sp.amount} for ${sp.month}`,
+        targetUserId: admin.id,
+        relatedId: id
+      });
+    }
   };
 
   const deleteSalaryPayment = async (id: string) => {
@@ -339,7 +355,19 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteTransaction = async (id: string) => {
+    const tx = transactions.find(t => t.id === id);
     await deleteDoc(doc(db, 'transactions', id));
+    if (tx) {
+      const otherAdmins = users.filter(u => u.role === 'admin' && u.id !== currentUser?.id);
+      for (const admin of otherAdmins) {
+        await addNotification({
+          type: 'transaction',
+          message: `🗑️ ${currentUser?.displayName} deleted transaction: "${tx.description}" (${tx.type === 'income' ? '+' : '-'}₹${tx.amount})`,
+          targetUserId: admin.id,
+          relatedId: id
+        });
+      }
+    }
   };
 
   const deleteClient = async (id: string) => {
