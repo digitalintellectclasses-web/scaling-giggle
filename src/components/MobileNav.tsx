@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Wallet, Users, Landmark, ClipboardList, Bell } from 'lucide-react';
+import { LayoutDashboard, Wallet, Users, Landmark, ClipboardList, Bell, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { useFinance } from '@/store/FinanceContext';
@@ -16,6 +16,7 @@ const navigation = [
   { name: 'Equity',        href: '/equity',      icon: Landmark,        adminOnly: true  },
   { name: 'Team',          href: '/employees',   icon: Users,           adminOnly: true  },
   { name: 'Clients',       href: '/clients',     icon: Users,           adminOnly: false },
+  { name: 'Settings',      href: '/settings',    icon: Settings,        adminOnly: true  },
 ];
 
 export function MobileNav() {

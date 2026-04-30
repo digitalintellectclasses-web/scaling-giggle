@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Wallet, Users, Landmark, LogOut, ShieldCheck, ClipboardList, Bell } from 'lucide-react';
+import { LayoutDashboard, Wallet, Users, Landmark, LogOut, ShieldCheck, ClipboardList, Bell, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/store/AuthContext';
@@ -18,6 +18,7 @@ const navigation = [
   { name: 'Partner Equity',href: '/equity',      icon: Landmark,        adminOnly: true  },
   { name: 'Employees',     href: '/employees',   icon: Users,           adminOnly: true  },
   { name: 'Clients',       href: '/clients',     icon: Users,           adminOnly: false },
+  { name: 'Settings',      href: '/settings',    icon: Settings,        adminOnly: true  },
 ];
 
 export function Sidebar() {
