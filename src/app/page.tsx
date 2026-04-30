@@ -2,7 +2,7 @@
 
 import { useFinance } from '@/store/FinanceContext';
 import { useAuth } from '@/store/AuthContext';
-import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, YAxis, CartesianGrid } from 'recharts';
+import { BarChart, Bar, AreaChart, Area, XAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, YAxis, CartesianGrid } from 'recharts';
 import { TrendingUp, IndianRupee, PieChart as PieChartIcon, SplitSquareHorizontal, LayoutDashboard, Activity, CalendarDays, UserPlus, ShieldCheck, User, CheckCircle2, ListTodo, Users as UsersIcon, ArrowRight, ShieldAlert } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -20,6 +20,15 @@ export default function Dashboard() {
   const { transactions, equities, isAdmin, isLoaded, requestGlobalReset, activeResetRequest } = useFinance();
   const { users, createEmployee } = useAuth();
   const router = useRouter();
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    show: { opacity: 1, transition: { staggerChildren: 0.1 } }
+  };
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 300, damping: 24 } }
+  };
 
   const [showResetModal, setShowResetModal] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
@@ -211,18 +220,23 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="space-y-6 pb-20">
+    <motion.div 
+      variants={containerVariants}
+      initial="hidden"
+      animate="show"
+      className="space-y-6 pb-20"
+    >
       {/* Reset Confirmation Modal */}
       {showResetModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-          <div className="bg-zinc-900 border border-red-500/30 rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl shadow-red-900/20">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
+          <div className="bg-zinc-950 border border-red-500/30 rounded-2xl p-6 sm:p-8 max-w-md w-full shadow-[0_0_40px_rgba(239,68,68,0.15)]">
             <div className="flex items-center gap-4 mb-4">
-              <div className="w-12 h-12 rounded-xl bg-red-500/10 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-xl bg-red-500/10 flex items-center justify-center flex-shrink-0">
                 <ShieldAlert className="w-6 h-6 text-red-500" />
               </div>
               <div>
-                <h2 className="text-white font-bold text-lg">Request Global Reset</h2>
-                <p className="text-zinc-400 text-sm">This cannot be undone</p>
+                <h2 className="text-white font-bold text-lg leading-tight">Request Global Reset</h2>
+                <p className="text-zinc-400 text-xs sm:text-sm mt-0.5">This cannot be undone</p>
               </div>
             </div>
             <p className="text-zinc-300 text-sm mb-6 leading-relaxed">
@@ -292,107 +306,156 @@ export default function Dashboard() {
       </div>
 
       {/* Metrics Row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-        <div className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-6 shadow-sm relative overflow-hidden group">
-          <div className="flex justify-between items-start mb-4">
-            <h3 className="text-zinc-400 text-sm font-medium">Monthly Revenue</h3>
-            <div className="p-2 bg-emerald-500/10 rounded-lg"><TrendingUp className="h-4 w-4 text-emerald-500" /></div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 relative z-10">
+        <motion.div variants={itemVariants} className="bg-zinc-900/60 backdrop-blur-md border border-emerald-500/20 rounded-2xl p-6 shadow-[0_0_15px_rgba(16,185,129,0.05)] relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <div className="flex justify-between items-start mb-4 relative z-10">
+            <h3 className="text-zinc-400 text-sm font-medium uppercase tracking-wider">Monthly Revenue</h3>
+            <div className="p-2 bg-emerald-500/10 rounded-xl border border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.2)]"><TrendingUp className="h-4 w-4 text-emerald-400" /></div>
           </div>
-          <p className="text-xl md:text-3xl font-bold text-white">{formatINR(totalIncome)}</p>
-        </div>
+          <div className="mt-4 flex justify-end">
+            <p className="text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 to-emerald-500 relative z-10">{formatINR(totalIncome)}</p>
+          </div>
+        </motion.div>
 
-        <div className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-6 shadow-sm relative overflow-hidden group">
-          <div className="flex justify-between items-start mb-4">
-            <h3 className="text-zinc-400 text-sm font-medium">Monthly Expenses</h3>
-            <div className="p-2 bg-red-500/10 rounded-lg"><TrendingUp className="h-4 w-4 text-red-500 rotate-180" /></div>
+        <motion.div variants={itemVariants} className="bg-zinc-900/60 backdrop-blur-md border border-red-500/20 rounded-2xl p-6 shadow-[0_0_15px_rgba(239,68,68,0.05)] relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <div className="flex justify-between items-start mb-4 relative z-10">
+            <h3 className="text-zinc-400 text-sm font-medium uppercase tracking-wider">Monthly Expenses</h3>
+            <div className="p-2 bg-red-500/10 rounded-xl border border-red-500/20 shadow-[0_0_10px_rgba(239,68,68,0.2)]"><TrendingUp className="h-4 w-4 text-red-400 rotate-180" /></div>
           </div>
-          <p className="text-xl md:text-3xl font-bold text-white">{formatINR(totalExpense)}</p>
-        </div>
+          <div className="mt-4 flex justify-end">
+            <p className="text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-red-600 relative z-10">{formatINR(totalExpense)}</p>
+          </div>
+        </motion.div>
 
-        <div className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-6 shadow-sm relative overflow-hidden group">
-          <div className="flex justify-between items-start mb-4">
-            <h3 className="text-zinc-400 text-sm font-medium">Net Profit</h3>
-            <div className="p-2 bg-blue-500/10 rounded-lg"><IndianRupee className="h-4 w-4 text-blue-500" /></div>
+        <motion.div variants={itemVariants} className="bg-zinc-900/60 backdrop-blur-md border border-blue-500/20 rounded-2xl p-6 shadow-[0_0_15px_rgba(59,130,246,0.05)] relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <div className="flex justify-between items-start mb-4 relative z-10">
+            <h3 className="text-zinc-400 text-sm font-medium uppercase tracking-wider">Net Profit</h3>
+            <div className="p-2 bg-blue-500/10 rounded-xl border border-blue-500/20 shadow-[0_0_10px_rgba(59,130,246,0.2)]"><IndianRupee className="h-4 w-4 text-blue-400" /></div>
           </div>
-          <p className="text-xl md:text-3xl font-bold text-white">{formatINR(netProfit)}</p>
-        </div>
+          <div className="mt-4 flex justify-end">
+            <p className="text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-blue-600 relative z-10">{formatINR(netProfit)}</p>
+          </div>
+        </motion.div>
 
-        <div className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-6 shadow-sm relative overflow-hidden group">
-          <div className="flex justify-between items-start mb-4">
-            <h3 className="text-zinc-400 text-sm font-medium">Partner Split (50/50)</h3>
-            <div className="p-2 bg-purple-500/10 rounded-lg"><SplitSquareHorizontal className="h-4 w-4 text-purple-500" /></div>
+        <motion.div variants={itemVariants} className="bg-zinc-900/60 backdrop-blur-md border border-purple-500/20 rounded-2xl p-6 shadow-[0_0_15px_rgba(168,85,247,0.05)] relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <div className="flex justify-between items-start mb-4 relative z-10">
+            <h3 className="text-zinc-400 text-sm font-medium uppercase tracking-wider">Partner Split</h3>
+            <div className="p-2 bg-purple-500/10 rounded-xl border border-purple-500/20 shadow-[0_0_10px_rgba(168,85,247,0.2)]"><SplitSquareHorizontal className="h-4 w-4 text-purple-400" /></div>
           </div>
-          <p className="text-xl md:text-3xl font-bold text-emerald-400">{formatINR(partnerSplit)}</p>
-          <p className="text-xs text-zinc-500 mt-2">Available per partner</p>
-        </div>
+          <div className="mt-4 flex flex-col items-end">
+            <p className="text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-purple-600 relative z-10">{formatINR(partnerSplit)}</p>
+            <p className="text-[10px] sm:text-xs text-zinc-500 font-medium relative z-10">50/50 per partner</p>
+          </div>
+        </motion.div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Daily Insights Report */}
-        <div className="col-span-1 lg:col-span-2 bg-zinc-900/40 border border-zinc-800 rounded-2xl p-6">
-          <div className="flex items-center gap-2 mb-6">
-            <CalendarDays className="h-5 w-5 text-zinc-400" />
-            <h3 className="text-lg font-semibold text-white">Period Insight Report</h3>
+        <motion.div variants={itemVariants} className="col-span-1 lg:col-span-2 bg-zinc-950 border border-zinc-800/80 rounded-2xl p-6 relative overflow-hidden group">
+          {/* Futuristic grid background */}
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none" />
+          
+          <div className="flex items-center gap-2 mb-6 relative z-10">
+            <div className="p-1.5 bg-zinc-800 rounded-md border border-zinc-700 shadow-[0_0_10px_rgba(255,255,255,0.05)]">
+              <Activity className="h-4 w-4 text-zinc-300" />
+            </div>
+            <h3 className="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-zinc-100 to-zinc-400 tracking-tight">Period Insight Report</h3>
           </div>
+          
           {dailyInsights.length > 0 ? (
-            <div className="h-[300px] w-full mt-4" style={{ minHeight: 300 }}>
+            <div className="h-[300px] w-full mt-4 relative z-10" style={{ minHeight: 300 }}>
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={dailyInsights} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
-                  <XAxis dataKey="displayKey" stroke="#52525b" fontSize={12} tickLine={false} axisLine={false} />
-                  <YAxis stroke="#52525b" fontSize={10} tickLine={false} axisLine={false} tickFormatter={v => v === 0 ? '' : `₹${(v/1000).toFixed(0)}k`} />
+                <AreaChart data={dailyInsights} margin={{ top: 20, right: 5, left: -20, bottom: 5 }}>
+                  <defs>
+                    <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.5}/>
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                    </linearGradient>
+                    <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#ef4444" stopOpacity={0.5}/>
+                      <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
+                    </linearGradient>
+                    <linearGradient id="colorNet" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.5}/>
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                    </linearGradient>
+                    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                      <feGaussianBlur stdDeviation="4" result="blur" />
+                      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                  </defs>
+                  <XAxis dataKey="displayKey" stroke="#52525b" fontSize={10} tickLine={false} axisLine={false} tickMargin={10} minTickGap={15} />
+                  <YAxis stroke="#52525b" fontSize={10} tickLine={false} axisLine={false} width={40} tickFormatter={v => v === 0 ? '' : `${(v/1000).toFixed(0)}k`} />
                   <Tooltip 
-                    contentStyle={{ backgroundColor: '#09090b', border: '1px solid #27272a', borderRadius: '8px' }}
-                    itemStyle={{ color: '#fafafa' }}
+                    cursor={{ stroke: '#3f3f46', strokeWidth: 1, strokeDasharray: '4 4' }}
+                    contentStyle={{ backgroundColor: 'rgba(9, 9, 11, 0.9)', backdropFilter: 'blur(8px)', border: '1px solid #3f3f46', borderRadius: '12px', boxShadow: '0 0 20px rgba(0,0,0,0.5)' }}
+                    itemStyle={{ color: '#fafafa', fontWeight: 600 }}
+                    labelStyle={{ color: '#a1a1aa', marginBottom: '8px', fontWeight: 500 }}
                     formatter={(val: any) => [`₹${Number(val).toLocaleString('en-IN')}`, undefined]}
                   />
-                  <CartesianGrid stroke="#27272a" strokeDasharray="3 3" vertical={false} />
-                  <Bar dataKey="Income" fill="#10b981" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="Expenses" fill="#ef4444" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="Net" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                </BarChart>
+                  <CartesianGrid stroke="#27272a" strokeDasharray="3 3" vertical={false} opacity={0.3} />
+                  <Area type="monotone" dataKey="Income" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorIncome)" filter="url(#glow)" />
+                  <Area type="monotone" dataKey="Expenses" stroke="#ef4444" strokeWidth={3} fillOpacity={1} fill="url(#colorExpense)" filter="url(#glow)" />
+                  <Area type="monotone" dataKey="Net" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorNet)" filter="url(#glow)" />
+                </AreaChart>
               </ResponsiveContainer>
             </div>
           ) : (
-             <div className="h-[300px] flex items-center justify-center text-zinc-500">No data available for this month.</div>
+             <div className="h-[300px] flex items-center justify-center text-zinc-500 relative z-10">No data available for this month.</div>
           )}
-        </div>
+        </motion.div>
 
         {/* Finance State Activity Feed */}
-        <div className="col-span-1 bg-zinc-900/40 border border-zinc-800 rounded-2xl p-6 flex flex-col h-[400px]">
+        <motion.div variants={itemVariants} className="col-span-1 bg-zinc-950/80 backdrop-blur-xl border border-zinc-800 rounded-2xl p-6 flex flex-col h-[400px] shadow-[0_0_20px_rgba(0,0,0,0.5)]">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-2">
-              <Activity className="h-5 w-5 text-zinc-400" />
-              <h3 className="text-lg font-semibold text-white">State Activity</h3>
+              <Activity className="h-5 w-5 text-emerald-500 animate-pulse" />
+              <h3 className="text-lg font-bold text-white tracking-tight">Live Ledger Feed</h3>
             </div>
-            <span className="text-xs text-zinc-500 bg-zinc-800 px-2 py-1 rounded-md">Live</span>
+            <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-1 rounded-md flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Streaming
+            </span>
           </div>
           
-          <div className="flex-1 overflow-y-auto pr-2 space-y-4">
+          <div className="flex-1 overflow-y-auto pr-2 space-y-3 custom-scrollbar">
             {activityFeed.length === 0 ? (
                <div className="h-full flex flex-col items-center justify-center text-zinc-500 text-sm">
-                 No recent activity.
+                 Waiting for signals...
                </div>
             ) : (
               activityFeed.map((item, i) => (
-                <div key={`${item.id}-${i}`} className="flex items-start gap-4 p-3 bg-zinc-900/50 rounded-xl border border-zinc-800/50">
-                  <div className={`mt-1 h-2 w-2 rounded-full flex-shrink-0 ${item.isPositive ? 'bg-emerald-500' : 'bg-red-500'} ${item.type === 'Equity' ? 'shadow-[0_0_8px_rgba(255,255,255,0.5)]' : ''}`} />
+                <motion.div 
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.05 }}
+                  key={`${item.id}-${i}`} 
+                  className="flex items-center gap-4 p-3 bg-zinc-900/40 hover:bg-zinc-800/60 transition-colors rounded-xl border border-zinc-800/50"
+                >
+                  <div className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${item.isPositive ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]' : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)]'} ${item.type === 'Equity' ? 'ring-2 ring-white/20' : ''}`} />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-white truncate">{item.title}</p>
-                    <p className="text-xs text-zinc-400 mt-0.5">{item.subtitle}</p>
-                    <p className="text-xs text-zinc-500 mt-1">{format(new Date(item.date), 'MMM dd')}</p>
+                    <p className="text-sm font-semibold text-white truncate">{item.title}</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <p className="text-[11px] font-medium text-zinc-500 uppercase tracking-wider">{item.subtitle}</p>
+                      <span className="text-[10px] text-zinc-600 font-medium bg-zinc-900 px-1.5 py-0.5 rounded">{format(new Date(item.date), 'dd MMM')}</span>
+                    </div>
                   </div>
-                  <div className={`text-sm font-semibold flex-shrink-0 ${item.isPositive ? 'text-emerald-400' : 'text-zinc-100'}`}>
+                  <div className={`text-sm font-bold flex-shrink-0 tracking-tight ${item.isPositive ? 'text-emerald-400' : 'text-zinc-300'}`}>
                     {item.isPositive ? '+' : '-'}{formatINR(item.amount)}
                   </div>
-                </div>
+                </motion.div>
               ))
             )}
           </div>
-        </div>
+        </motion.div>
 
         {/* Employee Productivity Analysis */}
-        <div className="col-span-1 lg:col-span-3 bg-zinc-900/40 border border-zinc-800 rounded-2xl p-6">
+        <motion.div variants={itemVariants} className="col-span-1 lg:col-span-3 bg-zinc-950/80 backdrop-blur-xl border border-zinc-800 rounded-2xl p-6 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/3 pointer-events-none" />
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-2">
               <UsersIcon className="h-5 w-5 text-emerald-500" />
@@ -443,16 +506,17 @@ export default function Dashboard() {
                </div>
              ))}
           </div>
-        </div>
+        </motion.div>
 
         {/* Expense Distribution */}
-        <div className="col-span-1 lg:col-span-3 bg-zinc-900/40 border border-zinc-800 rounded-2xl p-6">
-          <div className="flex items-center gap-2 mb-6">
-            <PieChartIcon className="h-5 w-5 text-zinc-400" />
-            <h3 className="text-lg font-semibold text-white">Expense Distribution</h3>
+        <motion.div variants={itemVariants} className="col-span-1 lg:col-span-3 bg-zinc-950/80 backdrop-blur-xl border border-zinc-800 rounded-2xl p-6 relative overflow-hidden">
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-500/5 rounded-full blur-[80px] translate-y-1/2 -translate-x-1/3 pointer-events-none" />
+          <div className="flex items-center gap-2 mb-6 relative z-10">
+            <PieChartIcon className="h-5 w-5 text-purple-400" />
+            <h3 className="text-lg font-bold text-white tracking-tight">Expense Distribution</h3>
           </div>
           {expenseByCategory.length > 0 ? (
-            <div className="h-[300px] w-full flex items-center justify-center">
+            <div className="h-[300px] w-full flex items-center justify-center relative z-10">
               <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                 <PieChart>
                   <Pie
@@ -469,23 +533,23 @@ export default function Dashboard() {
                     ))}
                   </Pie>
                   <Tooltip 
-                    contentStyle={{ backgroundColor: '#09090b', border: '1px solid #27272a', borderRadius: '8px' }}
-                    itemStyle={{ color: '#fafafa' }}
+                    contentStyle={{ backgroundColor: 'rgba(9, 9, 11, 0.9)', backdropFilter: 'blur(8px)', border: '1px solid #3f3f46', borderRadius: '12px', boxShadow: '0 0 20px rgba(0,0,0,0.5)' }}
+                    itemStyle={{ color: '#fafafa', fontWeight: 600 }}
                   />
                 </PieChart>
               </ResponsiveContainer>
             </div>
           ) : (
-             <div className="h-[300px] flex items-center justify-center text-zinc-500">No expenses recorded for this month.</div>
+             <div className="h-[300px] flex items-center justify-center text-zinc-500 relative z-10">No expenses recorded for this month.</div>
           )}
-        </div>
+        </motion.div>
       </div>
 
       {/* ── Employee Management ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-4">
+      <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-4 w-full">
 
         {/* Create Employee Form */}
-        <div className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-6">
+        <div className="bg-zinc-950/80 backdrop-blur-xl border border-zinc-800 rounded-2xl p-6">
           <div className="flex items-center gap-2 mb-6">
             <UserPlus className="h-5 w-5 text-purple-400" />
             <h3 className="text-lg font-semibold text-white">Create Employee Account</h3>
@@ -520,10 +584,10 @@ export default function Dashboard() {
         </div>
 
         {/* Employee List */}
-        <div className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-6 flex flex-col">
+        <div className="bg-zinc-950/80 backdrop-blur-xl border border-zinc-800 rounded-2xl p-6 flex flex-col">
           <div className="flex items-center gap-2 mb-6">
-            <ShieldCheck className="h-5 w-5 text-zinc-400" />
-            <h3 className="text-lg font-semibold text-white">All Users</h3>
+            <ShieldCheck className="h-5 w-5 text-emerald-400" />
+            <h3 className="text-lg font-bold tracking-tight text-white">All Users</h3>
           </div>
           <div className="space-y-3 overflow-y-auto max-h-64 pr-1">
             {users.map(u => (
@@ -547,7 +611,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

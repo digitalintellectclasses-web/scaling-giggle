@@ -37,7 +37,7 @@ export function MobileNav() {
     <div className="fixed bottom-0 left-0 right-0 z-50 md:hidden">
       {/* Glassmorphism background */}
       <div className="bg-[#0f0f11]/80 backdrop-blur-xl border-t border-zinc-800/50 pb-safe shadow-[0_-8px_30px_rgb(0,0,0,0.5)]">
-        <nav className="flex items-center justify-around h-16 px-1">
+        <nav className="flex items-center h-16 px-2 overflow-x-auto flex-nowrap [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           {filteredNav.map((item) => {
             const isActive = pathname === item.href;
             return (
@@ -45,7 +45,7 @@ export function MobileNav() {
                 key={item.name}
                 href={item.href}
                 className={cn(
-                  'relative flex flex-col items-center justify-center flex-1 h-full gap-1 transition-all duration-300',
+                  'relative flex flex-col items-center justify-center flex-shrink-0 min-w-[72px] h-full gap-1.5 transition-all duration-300',
                   isActive ? 'text-emerald-400' : 'text-zinc-500 hover:text-zinc-300'
                 )}
               >
