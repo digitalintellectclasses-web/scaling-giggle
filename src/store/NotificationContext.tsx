@@ -112,7 +112,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   useEffect(() => {
     if (!currentUser) {
-      setNotifications([]);
+      setNotifications(prev => prev.length > 0 ? [] : prev);
       return;
     }
 
@@ -127,22 +127,23 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0))
         .slice(0, 20);
       
-      const latestNotif = newNotifs[0];
-      if (latestNotif && !latestNotif.isRead) {
-         const existing = notifications.find(n => n.id === latestNotif.id);
-         if (!existing) {
-           setToasts(prev => [...prev, latestNotif.message]);
-           setTimeout(() => {
-             setToasts(prev => prev.filter((_, i) => i !== 0));
-           }, 5000);
-         }
-      }
-
-      setNotifications(newNotifs);
+      setNotifications(prev => {
+        const latestNotif = newNotifs[0];
+        if (latestNotif && !latestNotif.isRead) {
+          const existing = prev.find(n => n.id === latestNotif.id);
+          if (!existing) {
+            setToasts(t => [...t, latestNotif.message]);
+            setTimeout(() => {
+              setToasts(t => t.filter((_, i) => i !== 0));
+            }, 5000);
+          }
+        }
+        return newNotifs;
+      });
     });
 
     return () => unsub();
-  }, [currentUser, notifications]);
+  }, [currentUser]);
 
   const addNotification = async (notif: Omit<Notification, 'id' | 'isRead' | 'createdAt'>) => {
     await addDoc(collection(db, 'notifications'), {
