@@ -16,7 +16,14 @@ export default function FinancialTracking() {
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('Service Retainer');
   const [description, setDescription] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  // Fix: use local date string (not UTC) to avoid off-by-one day in IST and other UTC+ zones
+  const [date, setDate] = useState(() => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  });
   
   // New Admin Fields
   const [managedBy, setManagedBy] = useState<'Pratik' | 'Pranav'>('Pratik');

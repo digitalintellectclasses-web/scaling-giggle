@@ -83,8 +83,10 @@ export default function Dashboard() {
 
   const monthlyTransactions = useMemo(() => {
     return transactions.filter(t => {
-      const d = new Date(t.date);
-      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+      // Parse as local date by splitting the YYYY-MM-DD string directly
+      // (avoids UTC midnight shift that moves IST dates back by 1 day)
+      const [y, m] = t.date.split('-').map(Number);
+      return (m - 1) === currentMonth && y === currentYear;
     });
   }, [transactions, currentMonth, currentYear]);
 
@@ -104,32 +106,43 @@ export default function Dashboard() {
 
   const COLORS = ['#ef4444', '#f97316', '#eab308', '#3b82f6', '#8b5cf6', '#10b981'];
 
-  // Daily Insight Report (Group income/expense by day for the current month up to today)
+  // Daily Insight Report — show all days in the current month, zero for days with no data
   const dailyInsights = useMemo(() => {
     const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    const today = new Date().getDate();
     const data = [];
-    
+
     for (let day = 1; day <= daysInMonth; day++) {
       const dateString = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
       const dayTxs = monthlyTransactions.filter(t => t.date.startsWith(dateString));
-      
+
       const income = dayTxs.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0);
       const expense = dayTxs.filter(t => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
       const net = income - expense;
-      
-      // Stop charting after today to avoid flatlining future dates unless they have forecasted transactions
-      if (day > new Date().getDate()) {
-        if (income === 0 && expense === 0) continue;
-      }
-      
+
+      // Always include past & today days; include future days only if they have data
+      if (day > today && income === 0 && expense === 0) continue;
+
       data.push({
         date: dateString,
         day: String(day).padStart(2, '0'),
         Income: income,
         Expenses: expense,
-        Net: net
+        Net: net,
       });
     }
+
+    // If we only have 1 or fewer points the chart collapses — pad with day 1 zeros
+    if (data.length < 2) {
+      const pad = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-01`;
+      if (!data.find(d => d.date === pad)) {
+        data.unshift({ date: pad, day: '01', Income: 0, Expenses: 0, Net: 0 });
+      }
+      const lastDay = String(daysInMonth).padStart(2, '0');
+      const padEnd = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${lastDay}`;
+      data.push({ date: padEnd, day: lastDay, Income: 0, Expenses: 0, Net: 0 });
+    }
+
     return data;
   }, [monthlyTransactions, currentMonth, currentYear]);
 
@@ -278,17 +291,20 @@ export default function Dashboard() {
             <h3 className="text-lg font-semibold text-white">Daily Insight Report</h3>
           </div>
           {dailyInsights.length > 0 ? (
-            <div className="h-[300px] w-full mt-4">
-              <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+            <div className="h-[300px] w-full mt-4" style={{ minHeight: 300 }}>
+              <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={dailyInsights} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
                   <XAxis dataKey="day" stroke="#52525b" fontSize={12} tickLine={false} axisLine={false} />
+                  <YAxis stroke="#52525b" fontSize={10} tickLine={false} axisLine={false} tickFormatter={v => v === 0 ? '' : `₹${(v/1000).toFixed(0)}k`} />
                   <Tooltip 
                     contentStyle={{ backgroundColor: '#09090b', border: '1px solid #27272a', borderRadius: '8px' }}
                     itemStyle={{ color: '#fafafa' }}
+                    formatter={(val: number) => [`₹${val.toLocaleString('en-IN')}`, undefined]}
                   />
+                  <CartesianGrid stroke="#27272a" strokeDasharray="3 3" vertical={false} />
                   <Line type="monotone" dataKey="Net" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4, fill: '#09090b', strokeWidth: 2 }} activeDot={{ r: 6 }} />
-                  <Line type="monotone" dataKey="Income" stroke="#10b981" strokeWidth={2} dot={false} strokeOpacity={0.3} />
-                  <Line type="monotone" dataKey="Expenses" stroke="#ef4444" strokeWidth={2} dot={false} strokeOpacity={0.3} />
+                  <Line type="monotone" dataKey="Income" stroke="#10b981" strokeWidth={2} dot={false} strokeOpacity={0.5} />
+                  <Line type="monotone" dataKey="Expenses" stroke="#ef4444" strokeWidth={2} dot={false} strokeOpacity={0.5} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
