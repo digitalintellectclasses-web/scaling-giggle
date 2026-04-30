@@ -78,73 +78,97 @@ export default function Dashboard() {
     }).sort((a, b) => b.rate - a.rate);
   }, [users, tasks]);
 
-  const currentMonth = new Date().getMonth();
-  const currentYear = new Date().getFullYear();
+  type DateRange = '1m' | '3m' | '6m' | '1y' | 'lifetime' | 'custom';
+  const [dateRange, setDateRange] = useState<DateRange>('1m');
+  const [customStart, setCustomStart] = useState('');
+  const [customEnd, setCustomEnd] = useState('');
 
-  const monthlyTransactions = useMemo(() => {
-    return transactions.filter(t => {
-      // Parse as local date by splitting the YYYY-MM-DD string directly
-      // (avoids UTC midnight shift that moves IST dates back by 1 day)
-      const [y, m] = t.date.split('-').map(Number);
-      return (m - 1) === currentMonth && y === currentYear;
-    });
-  }, [transactions, currentMonth, currentYear]);
+  const filteredTransactions = useMemo(() => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = now.getMonth() + 1;
+    const pad = (n: number) => String(n).padStart(2, '0');
 
-  const totalIncome = monthlyTransactions.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0);
-  const totalExpense = monthlyTransactions.filter(t => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
+    let startStr = '2000-01-01';
+    let endStr = '2099-12-31';
+
+    if (dateRange === '1m') {
+      startStr = `${y}-${pad(m)}-01`;
+      endStr = `${y}-${pad(m)}-31`;
+    } else if (dateRange === '3m') {
+      const startD = new Date(y, now.getMonth() - 2, 1);
+      startStr = `${startD.getFullYear()}-${pad(startD.getMonth() + 1)}-01`;
+      endStr = `${y}-${pad(m)}-31`;
+    } else if (dateRange === '6m') {
+      const startD = new Date(y, now.getMonth() - 5, 1);
+      startStr = `${startD.getFullYear()}-${pad(startD.getMonth() + 1)}-01`;
+      endStr = `${y}-${pad(m)}-31`;
+    } else if (dateRange === '1y') {
+      const startD = new Date(y, now.getMonth() - 11, 1);
+      startStr = `${startD.getFullYear()}-${pad(startD.getMonth() + 1)}-01`;
+      endStr = `${y}-${pad(m)}-31`;
+    } else if (dateRange === 'custom') {
+      if (customStart) startStr = customStart;
+      if (customEnd) endStr = customEnd;
+    }
+
+    return transactions.filter(t => t.date >= startStr && t.date <= endStr);
+  }, [transactions, dateRange, customStart, customEnd]);
+
+  const totalIncome = filteredTransactions.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0);
+  const totalExpense = filteredTransactions.filter(t => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
   const netProfit = totalIncome - totalExpense;
   const partnerSplit = netProfit > 0 ? netProfit / 2 : 0;
 
   // Expense Distribution
   const expenseByCategory = useMemo(() => {
     const categories: Record<string, number> = {};
-    monthlyTransactions.filter(t => t.type === 'expense').forEach(t => {
+    filteredTransactions.filter(t => t.type === 'expense').forEach(t => {
       categories[t.category] = (categories[t.category] || 0) + t.amount;
     });
     return Object.entries(categories).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
-  }, [monthlyTransactions]);
+  }, [filteredTransactions]);
 
   const COLORS = ['#ef4444', '#f97316', '#eab308', '#3b82f6', '#8b5cf6', '#10b981'];
 
-  // Daily Insight Report — show all days in the current month, zero for days with no data
+  // Period Insight Report
   const dailyInsights = useMemo(() => {
-    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-    const today = new Date().getDate();
-    const data = [];
+    const dataMap: Record<string, any> = {};
+    const isLongPeriod = dateRange === '1y' || dateRange === 'lifetime';
 
-    for (let day = 1; day <= daysInMonth; day++) {
-      const dateString = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      const dayTxs = monthlyTransactions.filter(t => t.date.startsWith(dateString));
-
-      const income = dayTxs.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0);
-      const expense = dayTxs.filter(t => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
-      const net = income - expense;
-
-      // Always include past & today days; include future days only if they have data
-      if (day > today && income === 0 && expense === 0) continue;
-
-      data.push({
-        date: dateString,
-        day: String(day).padStart(2, '0'),
-        Income: income,
-        Expenses: expense,
-        Net: net,
-      });
-    }
-
-    // If we only have 1 or fewer points the chart collapses — pad with day 1 zeros
-    if (data.length < 2) {
-      const pad = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-01`;
-      if (!data.find(d => d.date === pad)) {
-        data.unshift({ date: pad, day: '01', Income: 0, Expenses: 0, Net: 0 });
+    filteredTransactions.forEach(t => {
+      // If long period, group by YYYY-MM, else group by YYYY-MM-DD
+      const key = isLongPeriod ? t.date.substring(0, 7) : t.date;
+      
+      let displayKey = '';
+      if (isLongPeriod) {
+        const [y, m] = key.split('-');
+        displayKey = `${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(m)-1]} ${y.substring(2)}`;
+      } else {
+        displayKey = key.split('-').slice(1).reverse().join('/'); // DD/MM
       }
-      const lastDay = String(daysInMonth).padStart(2, '0');
-      const padEnd = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${lastDay}`;
-      data.push({ date: padEnd, day: lastDay, Income: 0, Expenses: 0, Net: 0 });
+
+      if (!dataMap[key]) {
+        dataMap[key] = { key, displayKey, Income: 0, Expenses: 0, Net: 0 };
+      }
+      
+      if (t.type === 'income') dataMap[key].Income += t.amount;
+      if (t.type === 'expense') dataMap[key].Expenses += t.amount;
+      dataMap[key].Net = dataMap[key].Income - dataMap[key].Expenses;
+    });
+
+    const data = Object.values(dataMap).sort((a, b) => a.key.localeCompare(b.key));
+
+    // Pad if not enough points so chart doesn't collapse
+    if (data.length === 0) {
+      data.push({ displayKey: 'N/A', Income: 0, Expenses: 0, Net: 0 });
+      data.push({ displayKey: 'N/A ', Income: 0, Expenses: 0, Net: 0 });
+    } else if (data.length === 1) {
+      data.unshift({ displayKey: '-', Income: 0, Expenses: 0, Net: 0 });
     }
 
     return data;
-  }, [monthlyTransactions, currentMonth, currentYear]);
+  }, [filteredTransactions, dateRange]);
 
   // Finance State Activity (Combined Feed)
   const activityFeed = useMemo(() => {
@@ -229,21 +253,42 @@ export default function Dashboard() {
           <p className="text-zinc-400">Executive financial insights and global state activity.</p>
         </div>
 
-        {isAdmin && (
-           <button 
-             onClick={handleRequestReset}
-             disabled={!!activeResetRequest}
-             className={cn(
-               "flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all border",
-               activeResetRequest 
-                 ? "bg-amber-500/10 border-amber-500/50 text-amber-500 animate-pulse cursor-wait" 
-                 : "bg-red-500/10 border-red-500/50 text-red-500 hover:bg-red-500 hover:text-white"
-             )}
-           >
-             <ShieldAlert className="w-4 h-4" />
-             {activeResetRequest ? "Reset Pending Approval..." : "Request Global Data Reset"}
-           </button>
-        )}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+          {dateRange === 'custom' && (
+            <div className="flex items-center gap-2 bg-zinc-900 border border-zinc-800 rounded-xl px-2 py-1">
+              <input type="date" value={customStart} onChange={e => setCustomStart(e.target.value)} className="bg-transparent text-white text-xs outline-none" />
+              <span className="text-zinc-500 text-xs">to</span>
+              <input type="date" value={customEnd} onChange={e => setCustomEnd(e.target.value)} className="bg-transparent text-white text-xs outline-none" />
+            </div>
+          )}
+          <select 
+            value={dateRange} 
+            onChange={(e) => setDateRange(e.target.value as DateRange)}
+            className="bg-zinc-900 border border-zinc-800 text-white text-sm px-3 py-2 rounded-xl outline-none focus:border-emerald-500 cursor-pointer"
+          >
+            <option value="1m">This Month</option>
+            <option value="3m">Last 3 Months</option>
+            <option value="6m">Last 6 Months</option>
+            <option value="1y">Last 1 Year</option>
+            <option value="lifetime">Lifetime</option>
+            <option value="custom">Custom Range</option>
+          </select>
+          {isAdmin && (
+             <button 
+               onClick={handleRequestReset}
+               disabled={!!activeResetRequest}
+               className={cn(
+                 "flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all border",
+                 activeResetRequest 
+                   ? "bg-amber-500/10 border-amber-500/50 text-amber-500 animate-pulse cursor-wait" 
+                   : "bg-red-500/10 border-red-500/50 text-red-500 hover:bg-red-500 hover:text-white"
+               )}
+             >
+               <ShieldAlert className="w-4 h-4" />
+               {activeResetRequest ? "Reset Pending Approval..." : "Request Global Data Reset"}
+             </button>
+          )}
+        </div>
       </div>
 
       {/* Metrics Row */}
@@ -288,18 +333,18 @@ export default function Dashboard() {
         <div className="col-span-1 lg:col-span-2 bg-zinc-900/40 border border-zinc-800 rounded-2xl p-6">
           <div className="flex items-center gap-2 mb-6">
             <CalendarDays className="h-5 w-5 text-zinc-400" />
-            <h3 className="text-lg font-semibold text-white">Daily Insight Report</h3>
+            <h3 className="text-lg font-semibold text-white">Period Insight Report</h3>
           </div>
           {dailyInsights.length > 0 ? (
             <div className="h-[300px] w-full mt-4" style={{ minHeight: 300 }}>
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={dailyInsights} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
-                  <XAxis dataKey="day" stroke="#52525b" fontSize={12} tickLine={false} axisLine={false} />
+                  <XAxis dataKey="displayKey" stroke="#52525b" fontSize={12} tickLine={false} axisLine={false} />
                   <YAxis stroke="#52525b" fontSize={10} tickLine={false} axisLine={false} tickFormatter={v => v === 0 ? '' : `₹${(v/1000).toFixed(0)}k`} />
                   <Tooltip 
                     contentStyle={{ backgroundColor: '#09090b', border: '1px solid #27272a', borderRadius: '8px' }}
                     itemStyle={{ color: '#fafafa' }}
-                    formatter={(val: number) => [`₹${val.toLocaleString('en-IN')}`, undefined]}
+                    formatter={(val: any) => [`₹${Number(val).toLocaleString('en-IN')}`, undefined]}
                   />
                   <CartesianGrid stroke="#27272a" strokeDasharray="3 3" vertical={false} />
                   <Bar dataKey="Income" fill="#10b981" radius={[4, 4, 0, 0]} />

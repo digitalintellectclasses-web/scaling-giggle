@@ -43,16 +43,18 @@ export default function BooksPage() {
 
   const handleDownloadPdf = async () => {
     if (typeof window === 'undefined') return;
-    const html2pdf = (await import('html2pdf.js')).default;
     const element = reportRef.current;
+    if (!element) return;
+
+    const html2pdf = (await import('html2pdf.js')).default;
     
     // Configure options
     const opt = {
       margin:       0.5,
       filename:     `Monthly_Report_${selectedMonth}.pdf`,
-      image:        { type: 'jpeg', quality: 0.98 },
+      image:        { type: 'jpeg' as 'jpeg', quality: 0.98 },
       html2canvas:  { scale: 2 },
-      jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+      jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' as 'portrait' }
     };
 
     html2pdf().set(opt).from(element).save();

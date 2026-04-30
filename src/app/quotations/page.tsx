@@ -66,9 +66,9 @@ export default function QuotationsPage() {
       const opt = {
         margin:       0.5,
         filename:     filename,
-        image:        { type: 'jpeg', quality: 0.98 },
+        image:        { type: 'jpeg' as 'jpeg', quality: 0.98 },
         html2canvas:  { scale: 2 },
-        jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+        jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' as 'portrait' }
       };
       await html2pdf().set(opt).from(elementRef.current).save();
     } catch (e) {
@@ -142,7 +142,7 @@ export default function QuotationsPage() {
                   <select value={selectedClient} onChange={e => setSelectedClient(e.target.value)}
                     className="block w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-white outline-none focus:border-emerald-500 text-sm">
                     <option value="">-- Choose a client --</option>
-                    {clients.map(c => <option key={c.id} value={c.id}>{c.name} ({c.company})</option>)}
+                    {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
                 
@@ -245,8 +245,6 @@ export default function QuotationsPage() {
                 <div>
                   <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-1">Prepared For</p>
                   <p className="font-bold text-lg">{client ? client.name : 'Client Name'}</p>
-                  <p className="text-zinc-600">{client ? client.company : 'Company Name'}</p>
-                  <p className="text-zinc-600 text-sm mt-1">{client ? client.email : 'client@email.com'}</p>
                 </div>
                 <div className="text-right">
                   <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-1">Prepared By</p>
