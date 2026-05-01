@@ -6,7 +6,7 @@ import { useFinance } from '@/store/FinanceContext';
 import {
   Settings, ShieldCheck, Users, Trash2, RefreshCw,
   AlertTriangle, ChevronDown, ChevronUp, Lock, UserCog,
-  Eye, EyeOff, Save, RotateCcw, Info, Crown, User,
+  Eye, EyeOff, Save, RotateCcw, Info, Crown, User, Palette, Sparkles, Zap
 } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
@@ -340,7 +340,39 @@ export default function SettingsPage() {
         </div>
       </Section>
 
-      {/* ── 4. Danger Zone ──────────────────────────────────────── */}
+      {/* ── 4. Visual Themes ───────────────────────────────────── */}
+      <Section title="Interface Aesthetics (Themes)" icon={Palette}>
+        <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {[
+            { id: 'default',   name: 'Default Noir', color: 'bg-emerald-500', icon: Crown },
+            { id: 'cyberpunk', name: 'Cyberpunk',    color: 'bg-purple-500',  icon: Zap },
+            { id: 'matrix',    name: 'Matrix',       color: 'bg-green-500',   icon: Info },
+            { id: 'sunset',    name: 'Sunset',       color: 'bg-orange-500',  icon: Sparkles },
+          ].map(t => (
+            <button
+              key={t.id}
+              onClick={() => {
+                localStorage.setItem('agency-theme', t.id);
+                window.location.reload(); // Quickest way to apply global filter class
+              }}
+              className={cn(
+                "group relative p-4 rounded-2xl border transition-all duration-300 overflow-hidden",
+                (typeof window !== 'undefined' && localStorage.getItem('agency-theme') === t.id) || (t.id === 'default' && typeof window !== 'undefined' && !localStorage.getItem('agency-theme'))
+                  ? "bg-zinc-800 border-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.1)]"
+                  : "bg-zinc-900/60 border-zinc-800 hover:border-zinc-700"
+              )}
+            >
+              <div className={cn("w-10 h-10 rounded-xl mb-3 flex items-center justify-center mx-auto", t.color + "/20")}>
+                <t.icon className={cn("w-5 h-5", t.color.replace('bg-', 'text-'))} />
+              </div>
+              <span className="text-xs font-bold text-zinc-300 group-hover:text-white">{t.name}</span>
+            </button>
+          ))}
+        </div>
+        <p className="text-[10px] text-zinc-500 mt-4 italic">Note: Themes use advanced CSS filters to re-skin the entire application instantly.</p>
+      </Section>
+
+      {/* ── 5. Danger Zone ──────────────────────────────────────── */}
       <Section title="Danger Zone" icon={AlertTriangle} defaultOpen={false}>
         <div className="mt-4 space-y-3">
           <div className="p-4 bg-red-500/5 border border-red-500/20 rounded-xl">

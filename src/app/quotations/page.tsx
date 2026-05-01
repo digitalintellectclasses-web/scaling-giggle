@@ -4,7 +4,7 @@ import { useState, useRef } from 'react';
 import { useFinance } from '@/store/FinanceContext';
 import { useQuote, QuoteItem } from '@/store/QuoteContext';
 import { useAuth } from '@/store/AuthContext';
-import { Plus, Trash2, Download, FileText, Check, File } from 'lucide-react';
+import { Plus, Trash2, Download, FileText, Check, File, Mail, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 
 const formatINR = (amount: number) => {
@@ -26,6 +26,9 @@ export default function QuotationsPage() {
   
   const [expiryDays, setExpiryDays] = useState(15);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isEmailing, setIsEmailing] = useState(false);
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [targetEmail, setTargetEmail] = useState('');
 
   const previewRef = useRef<HTMLDivElement>(null);
 
@@ -78,32 +81,86 @@ export default function QuotationsPage() {
   };
 
   const handleSaveQuotation = async () => {
-    if (!selectedClient || items.length === 0 || !currentUser) return;
+    if (!selectedClient || items.length === 0 || !currentUser) {
+      alert('Please select a client and add at least one item.');
+      return;
+    }
     
-    const now = new Date();
-    const expiry = new Date();
-    expiry.setDate(now.getDate() + expiryDays);
+    setIsGenerating(true); // Reuse generating state for save loading
+    try {
+      const now = new Date();
+      const expiry = new Date();
+      expiry.setDate(now.getDate() + expiryDays);
 
-    await addQuotation({
-      clientId: selectedClient,
-      clientName: client?.name || '',
-      createdBy: currentUser.id,
-      createdByName: currentUser.displayName,
-      date: now.toISOString(),
-      expiryDate: expiry.toISOString(),
-      items,
-      subtotal,
-      tax,
-      total,
-      status: 'draft',
-      notes
-    });
+      await addQuotation({
+        clientId: selectedClient,
+        clientName: client?.name || 'Unknown Client',
+        createdBy: currentUser.id,
+        createdByName: currentUser.displayName,
+        date: now.toISOString(),
+        expiryDate: expiry.toISOString(),
+        items,
+        subtotal,
+        tax,
+        total,
+        status: 'draft',
+        notes: notes || ''
+      });
+      
+      alert('✓ Quotation saved to history.');
+      // Reset form after saving
+      setSelectedClient('');
+      setItems([]);
+      setNotes('');
+      setActiveTab('history');
+    } catch (err: any) {
+      console.error('Save error:', err);
+      alert(`Failed to save: ${err.message}`);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleEmailWithPrompt = () => {
+    console.log('Opening Email Modal');
+    if (client?.email) {
+      setTargetEmail(client.email);
+    } else {
+      setTargetEmail('');
+    }
+    setShowEmailModal(true);
+  };
+
+  const handleEmailInvoice = async () => {
+    if (!selectedClient || items.length === 0 || !client || !targetEmail) {
+      alert('Please select a client, add items, and enter a valid email.');
+      return;
+    }
     
-    // Reset form after saving
-    setSelectedClient('');
-    setItems([]);
-    setNotes('');
-    setActiveTab('history');
+    setIsEmailing(true);
+    setShowEmailModal(false);
+    try {
+      const res = await fetch('/api/send-invoice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: targetEmail,
+          clientName: client.name,
+          amount: total,
+          invoiceUrl: '#',
+          type: 'quotation'
+        })
+      });
+      
+      const data = await res.json();
+      if (res.ok) alert('✓ Quotation emailed successfully!');
+      else throw new Error(data.error?.message || data.error || 'Failed to send email');
+    } catch (err: any) {
+      console.error('Email error:', err);
+      alert(`Error: ${err.message}`);
+    } finally {
+      setIsEmailing(false);
+    }
   };
 
   return (
@@ -205,21 +262,29 @@ export default function QuotationsPage() {
                   placeholder="Terms, conditions, or message to client..." />
               </div>
 
-              <div className="mt-6 flex gap-3">
+              <div className="mt-6 flex flex-col sm:flex-row gap-3">
                 <button 
                   onClick={() => handleDownloadPdf(previewRef, `Quotation_${client?.name?.replace(/\s+/g, '_') || 'Draft'}.pdf`)}
                   disabled={items.length === 0 || isGenerating}
                   className="flex-1 bg-zinc-800 disabled:opacity-50 hover:bg-zinc-700 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2"
                 >
-                  {isGenerating ? <div className="animate-spin h-4 w-4 border-2 border-white rounded-full border-t-transparent" /> : <Download className="w-4 h-4" />}
-                  Download PDF
+                  {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                  PDF
+                </button>
+                <button 
+                  onClick={handleEmailWithPrompt}
+                  disabled={items.length === 0 || isEmailing || !selectedClient}
+                  className="flex-1 bg-blue-600 disabled:opacity-50 hover:bg-blue-500 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2"
+                >
+                  {isEmailing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="w-4 h-4" />}
+                  Email
                 </button>
                 <button 
                   onClick={handleSaveQuotation}
                   disabled={!selectedClient || items.length === 0}
                   className="flex-1 bg-emerald-600 disabled:opacity-50 hover:bg-emerald-500 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-emerald-900/20"
                 >
-                  <Check className="w-4 h-4" /> Save Quotation
+                  <Check className="w-4 h-4" /> Save
                 </button>
               </div>
             </div>
@@ -228,87 +293,119 @@ export default function QuotationsPage() {
           {/* Preview Panel */}
           <div className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-6 overflow-x-auto relative">
             <h2 className="text-xl font-semibold text-white mb-4">Document Preview</h2>
-            <div className="bg-white rounded-lg p-6 min-w-[600px] text-zinc-900 shadow-xl" ref={previewRef}>
+            <div className="bg-white rounded-lg p-10 min-w-[700px] text-zinc-900 shadow-2xl" ref={previewRef} style={{ color: '#0f172a', backgroundColor: '#ffffff', fontFamily: 'system-ui, sans-serif' }}>
               
-              <div className="border-b-2 border-emerald-600 pb-6 mb-6 flex justify-between items-start">
+              {/* Premium Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '4px solid #10b981', paddingBottom: '30px', marginBottom: '40px' }}>
                 <div>
-                  <h1 className="text-4xl font-black text-emerald-700 uppercase tracking-tighter">QUOTATION</h1>
-                  <p className="text-sm font-semibold text-zinc-600 mt-2">Agency Dashboard</p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                    <div style={{ width: '40px', height: '40px', backgroundColor: '#10b981', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyCenter: 'center', color: 'white', fontWeight: 900, fontSize: '24px' }}>A</div>
+                    <span style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em' }}>PRIME CREATIVE</span>
+                  </div>
+                  <div style={{ fontSize: '13px', color: '#64748b', lineHeight: '1.6' }}>
+                    <p style={{ margin: 0 }}>123 Innovation Way, Suite 500</p>
+                    <p style={{ margin: 0 }}>Tech District, Mumbai 400001</p>
+                    <p style={{ margin: 0 }}>+91 98765 43210 | hello@primecreative.com</p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm font-bold text-zinc-800">Date: {format(new Date(), 'dd MMM yyyy')}</p>
-                  <p className="text-sm text-zinc-600">Valid Until: {format(new Date(Date.now() + expiryDays * 86400000), 'dd MMM yyyy')}</p>
+                <div style={{ textAlign: 'right' }}>
+                  <h1 style={{ fontSize: '42px', fontWeight: 900, color: '#10b981', margin: 0, lineHeight: 1 }}>QUOTATION</h1>
+                  <p style={{ fontSize: '14px', fontWeight: 600, color: '#94a3b8', marginTop: '8px', margin: 0 }}>REF: #QT-{Math.floor(1000 + Math.random() * 9000)}</p>
+                  <div style={{ marginTop: '20px', fontSize: '14px' }}>
+                    <p style={{ margin: 0 }}><strong>Date:</strong> {format(new Date(), 'dd MMM yyyy')}</p>
+                    <p style={{ margin: 0, color: '#ef4444' }}><strong>Expires:</strong> {format(new Date(Date.now() + expiryDays * 86400000), 'dd MMM yyyy')}</p>
+                  </div>
                 </div>
               </div>
 
-              <div className="mb-8 flex justify-between">
-                <div>
-                  <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-1">Prepared For</p>
-                  <p className="font-bold text-lg">{client ? client.name : 'Client Name'}</p>
+              {/* Info Section */}
+              <div style={{ display: 'flex', gap: '40px', marginBottom: '40px' }}>
+                <div style={{ flex: 1, backgroundColor: '#f8fafc', padding: '20px', borderRadius: '12px', borderLeft: '4px solid #334155' }}>
+                  <p style={{ fontSize: '11px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px', margin: 0 }}>Client Information</p>
+                  <p style={{ fontWeight: 800, fontSize: '20px', color: '#1e293b', margin: 0 }}>{client ? client.name : 'Client Name'}</p>
+                  <p style={{ fontSize: '14px', color: '#64748b', marginTop: '4px', margin: 0 }}>{client?.email || 'client@example.com'}</p>
                 </div>
-                <div className="text-right">
-                  <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-1">Prepared By</p>
-                  <p className="font-bold text-lg">{currentUser?.displayName || 'Admin'}</p>
-                  <p className="text-zinc-600">Agency Representative</p>
+                <div style={{ flex: 1, backgroundColor: '#f8fafc', padding: '20px', borderRadius: '12px', borderLeft: '4px solid #10b981' }}>
+                  <p style={{ fontSize: '11px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px', margin: 0 }}>Account Executive</p>
+                  <p style={{ fontWeight: 800, fontSize: '20px', color: '#1e293b', margin: 0 }}>{currentUser?.displayName || 'Senior Consultant'}</p>
+                  <p style={{ fontSize: '14px', color: '#64748b', marginTop: '4px', margin: 0 }}>Authorized Representative</p>
                 </div>
               </div>
 
-              <table className="w-full mb-8">
+              {/* Table Section */}
+              <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '40px' }}>
                 <thead>
-                  <tr className="bg-zinc-100 text-zinc-600 text-sm uppercase tracking-wider">
-                    <th className="py-2 px-4 text-left font-semibold">Service Description</th>
-                    <th className="py-2 px-4 text-center font-semibold w-24">Qty</th>
-                    <th className="py-2 px-4 text-right font-semibold w-32">Rate</th>
-                    <th className="py-2 px-4 text-right font-semibold w-32">Amount</th>
+                  <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
+                    <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Description of Services</th>
+                    <th style={{ padding: '16px', textAlign: 'center', fontSize: '12px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', width: '80px' }}>Qty</th>
+                    <th style={{ padding: '16px', textAlign: 'right', fontSize: '12px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', width: '140px' }}>Unit Price</th>
+                    <th style={{ padding: '16px', textAlign: 'right', fontSize: '12px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', width: '140px' }}>Amount</th>
                   </tr>
                 </thead>
                 <tbody>
                   {items.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="py-8 text-center text-zinc-400 italic">Add services to populate the quotation</td>
+                      <td colSpan={4} style={{ padding: '60px', textAlign: 'center', color: '#94a3b8', fontStyle: 'italic', fontSize: '15px' }}>
+                        No line items added to this quotation yet.
+                      </td>
                     </tr>
                   ) : (
                     items.map((item, idx) => (
-                      <tr key={idx} className="border-b border-zinc-100">
-                        <td className="py-4 px-4">
-                          <p className="font-bold text-zinc-800">{item.serviceName}</p>
-                          <p className="text-xs text-zinc-500 mt-1">{item.description}</p>
+                      <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9', backgroundColor: idx % 2 === 0 ? '#ffffff' : '#fcfcfc' }}>
+                        <td style={{ padding: '20px 16px' }}>
+                          <p style={{ fontWeight: 700, color: '#1e293b', fontSize: '15px', margin: 0 }}>{item.serviceName}</p>
+                          <p style={{ fontSize: '13px', color: '#64748b', marginTop: '4px', margin: 0, maxWidth: '400px' }}>{item.description}</p>
                         </td>
-                        <td className="py-4 px-4 text-center text-zinc-700">{item.quantity}</td>
-                        <td className="py-4 px-4 text-right text-zinc-700">{formatINR(item.rate)}</td>
-                        <td className="py-4 px-4 text-right font-bold text-zinc-900">{formatINR(item.amount)}</td>
+                        <td style={{ padding: '20px 16px', textAlign: 'center', color: '#475569', fontSize: '15px' }}>{item.quantity}</td>
+                        <td style={{ padding: '20px 16px', textAlign: 'right', color: '#475569', fontSize: '15px' }}>{formatINR(item.rate)}</td>
+                        <td style={{ padding: '20px 16px', textAlign: 'right', fontWeight: 700, color: '#0f172a', fontSize: '16px' }}>{formatINR(item.amount)}</td>
                       </tr>
                     ))
                   )}
                 </tbody>
               </table>
 
-              <div className="flex justify-end mb-8">
-                <div className="w-64 space-y-2">
-                  <div className="flex justify-between text-zinc-600">
+              {/* Totals Section */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '80px', padding: '0 16px', marginBottom: '60px' }}>
+                <div style={{ width: '300px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', fontSize: '15px', marginBottom: '12px' }}>
                     <span>Subtotal</span>
-                    <span>{formatINR(subtotal)}</span>
+                    <span style={{ fontWeight: 600 }}>{formatINR(subtotal)}</span>
                   </div>
-                  <div className="flex justify-between text-zinc-600 pb-2 border-b border-zinc-200">
-                    <span>Tax (18%)</span>
-                    <span>{formatINR(tax)}</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', fontSize: '15px', marginBottom: '12px' }}>
+                    <span>GST / Sales Tax (18%)</span>
+                    <span style={{ fontWeight: 600 }}>{formatINR(tax)}</span>
                   </div>
-                  <div className="flex justify-between text-emerald-700 font-black text-xl pt-2">
-                    <span>Total</span>
+                  <div style={{ borderTop: '2px solid #e2e8f0', marginTop: '16px', paddingTop: '16px', display: 'flex', justifyContent: 'space-between', color: '#10b981', fontWeight: 900, fontSize: '28px' }}>
+                    <span>TOTAL</span>
                     <span>{formatINR(total)}</span>
                   </div>
                 </div>
               </div>
 
-              {notes && (
-                <div className="bg-zinc-50 p-4 rounded-lg border border-zinc-100 mb-8">
-                  <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">Notes & Terms</p>
-                  <p className="text-sm text-zinc-700 whitespace-pre-wrap">{notes}</p>
+              {/* Footer / Terms Section */}
+              <div style={{ marginTop: 'auto' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px', borderTop: '1px solid #f1f5f9', paddingTop: '30px' }}>
+                  <div>
+                    <p style={{ fontSize: '11px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '10px', margin: 0 }}>Terms & Conditions</p>
+                    <div style={{ fontSize: '12px', color: '#64748b', lineHeight: '1.6' }}>
+                      <p style={{ margin: 0 }}>1. This quotation is valid for {expiryDays} days from the date of issue.</p>
+                      <p style={{ margin: 0 }}>2. 50% advance payment required to commence work.</p>
+                      <p style={{ margin: 0 }}>3. Remaining 50% due upon project completion and approval.</p>
+                    </div>
+                  </div>
+                  {notes && (
+                    <div>
+                      <p style={{ fontSize: '11px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '10px', margin: 0 }}>Internal Notes</p>
+                      <p style={{ fontSize: '12px', color: '#64748b', whiteSpace: 'pre-wrap', margin: 0 }}>{notes}</p>
+                    </div>
+                  )}
                 </div>
-              )}
 
-              <div className="text-center text-zinc-400 text-xs border-t border-zinc-200 pt-6 mt-10">
-                <p>Thank you for your business. For any queries regarding this quotation, please contact us.</p>
+                <div style={{ textAlign: 'center', marginTop: '60px', padding: '20px', backgroundColor: '#f8fafc', borderRadius: '12px' }}>
+                  <p style={{ fontSize: '14px', fontWeight: 700, color: '#334155', margin: 0 }}>Thank you for choosing Prime Creative Agency.</p>
+                  <p style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px', margin: 0 }}>www.primecreative.com | Powered by Agency Dashboard</p>
+                </div>
               </div>
             </div>
           </div>
@@ -358,6 +455,50 @@ export default function QuotationsPage() {
               </table>
             </div>
           )}
+        </div>
+      )}
+      {/* Email Modal */}
+      {showEmailModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 w-full max-w-md shadow-2xl animate-in fade-in zoom-in duration-200">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="bg-blue-500/20 p-2 rounded-lg text-blue-400">
+                <Mail className="w-6 h-6" />
+              </div>
+              <h3 className="text-xl font-bold text-white">Send Quotation</h3>
+            </div>
+            <p className="text-zinc-400 text-sm mb-6">Enter the recipient's email address to send this document professionally via Resend.</p>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1.5">Recipient Email</label>
+                <input 
+                  type="email" 
+                  value={targetEmail} 
+                  onChange={e => setTargetEmail(e.target.value)}
+                  placeholder="client@example.com"
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500 transition-all shadow-inner"
+                  autoFocus
+                />
+              </div>
+              
+              <div className="flex gap-3 pt-2">
+                <button 
+                  onClick={() => setShowEmailModal(false)}
+                  className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white font-bold py-3 rounded-xl transition-all"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleEmailInvoice}
+                  disabled={!targetEmail || !targetEmail.includes('@')}
+                  className="flex-1 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2"
+                >
+                  <Mail className="w-4 h-4" /> Send Now
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

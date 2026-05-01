@@ -9,7 +9,9 @@ import { Sidebar } from '@/components/Sidebar';
 import { MobileNav } from '@/components/MobileNav';
 import { NotificationBell } from '@/components/NotificationBell';
 import { FirebaseIndicator } from '@/components/FirebaseIndicator';
-import { LogOut, Bell, Key } from 'lucide-react';
+import { LogOut, Bell, Key, Palette } from 'lucide-react';
+import { useState } from 'react';
+import { cn } from '@/lib/utils';
 
 /**
  * AppShell is the root client wrapper that:
@@ -26,6 +28,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // financeLoaded. Waiting caused the 4s timeout to set financeLoaded=true
   // before auth arrived, making the dashboard see isAdmin=false and redirect
   // admin users to /clients permanently.
+  const [theme, setTheme] = useState<string>('default');
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('agency-theme') || 'default';
+    setTheme(savedTheme);
+  }, []);
+
   useEffect(() => {
     if (authLoaded) {
       setIsAdmin(currentUser?.role === 'admin');
@@ -51,7 +60,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex h-screen bg-[#09090b] overflow-hidden">
+    <div className={cn("flex h-screen bg-[#09090b] overflow-hidden transition-all duration-500", theme !== 'default' && `theme-${theme}`)}>
       {/* Desktop Sidebar */}
       <div className="hidden md:flex flex-shrink-0">
         <Sidebar />

@@ -76,29 +76,65 @@ export default function WorkPage() {
          />
       </div>
 
-      {/* Task List */}
-      <div className="space-y-4">
-        <h2 className="text-xl font-bold text-white flex items-center gap-2">
-           Task Roll
-           <span className="text-xs font-normal text-zinc-500 bg-zinc-800 px-2 py-0.5 rounded-full">
-             {filteredTasks.length} total
-           </span>
-        </h2>
-        
-        {filteredTasks.length === 0 ? (
-          <div className="bg-zinc-900/50 border border-zinc-800 border-dashed rounded-2xl p-12 text-center">
-             <ClipboardList className="w-12 h-12 text-zinc-700 mx-auto mb-4" />
-             <p className="text-zinc-500">No active allotments found.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <AnimatePresence mode="popLayout">
-              {filteredTasks.map(task => (
-                <TaskCard key={task.id} task={task} />
-              ))}
-            </AnimatePresence>
-          </div>
-        )}
+      {/* Kanban Board */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {(['pending', 'in-progress', 'completed'] as TaskStatus[]).map(status => {
+          const columnTasks = filteredTasks.filter(t => t.status === status);
+          
+          const columnStyles = {
+            'pending': { label: 'To Do', icon: AlertCircle, color: 'text-amber-400', border: 'border-amber-500/20', bg: 'bg-amber-500/5' },
+            'in-progress': { label: 'In Progress', icon: Clock, color: 'text-blue-400', border: 'border-blue-500/20', bg: 'bg-blue-500/5' },
+            'completed': { label: 'Done', icon: CheckCircle2, color: 'text-emerald-400', border: 'border-emerald-500/20', bg: 'bg-emerald-500/5' }
+          }[status];
+
+          return (
+            <div 
+              key={status}
+              className={cn("flex flex-col h-full min-h-[500px] rounded-3xl border border-dashed p-4 transition-colors", columnStyles.border, columnStyles.bg)}
+              onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('bg-zinc-800/50'); }}
+              onDragLeave={(e) => { e.currentTarget.classList.remove('bg-zinc-800/50'); }}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.currentTarget.classList.remove('bg-zinc-800/50');
+                const taskId = e.dataTransfer.getData('taskId');
+                const task = tasks.find(t => t.id === taskId);
+                if (taskId && task && task.status !== status) {
+                  // Only allow employees to move their own tasks, admins can move anything
+                  if (isAdmin || task.assignedTo === currentUser?.id) {
+                    const note = status === 'completed' && task.status !== 'completed' ? prompt('Add completion note (optional):') : undefined;
+                    updateTaskStatus(taskId, status, note || undefined);
+                  }
+                }
+              }}
+            >
+              <div className="flex items-center justify-between mb-4 px-2">
+                <div className="flex items-center gap-2">
+                  <columnStyles.icon className={cn("w-5 h-5", columnStyles.color)} />
+                  <h3 className="font-bold text-white tracking-wide">{columnStyles.label}</h3>
+                </div>
+                <span className="text-xs font-black bg-zinc-950 px-2.5 py-1 rounded-full text-zinc-400 border border-zinc-800">
+                  {columnTasks.length}
+                </span>
+              </div>
+              
+              <div className="flex-1 space-y-3">
+                <AnimatePresence mode="popLayout">
+                  {columnTasks.map(task => (
+                    <TaskCard key={task.id} task={task} />
+                  ))}
+                  {columnTasks.length === 0 && (
+                    <motion.div 
+                      initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                      className="h-24 border-2 border-dashed border-zinc-800 rounded-2xl flex items-center justify-center text-zinc-600 text-sm font-medium"
+                    >
+                      Drop tasks here
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {/* New Allotment Modal */}
@@ -142,10 +178,20 @@ function TaskCard({ task }: { task: Task }) {
   return (
     <motion.div 
       layout
+      draggable={isAdmin || isAssignedToMe}
+      onDragStart={(e: any) => {
+        e.dataTransfer.setData('taskId', task.id);
+        e.dataTransfer.effectAllowed = 'move';
+      }}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden shadow-xl"
+      whileHover={isAdmin || isAssignedToMe ? { scale: 1.02, cursor: 'grab' } : {}}
+      whileTap={isAdmin || isAssignedToMe ? { scale: 0.98, cursor: 'grabbing' } : {}}
+      className={cn(
+        "bg-zinc-950 border rounded-2xl overflow-hidden shadow-xl",
+        isAdmin || isAssignedToMe ? "hover:border-zinc-700 transition-colors" : "border-zinc-800"
+      )}
     >
       <div className="p-5 space-y-4">
         <div className="flex items-start justify-between gap-4">

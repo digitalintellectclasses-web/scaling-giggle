@@ -50,3 +50,20 @@ body {
     border-color: var(--color-border);
   }
 }
+
+/* ── Cyberpunk Themes (Global Filter Logic) ────────────────── */
+.theme-cyberpunk {
+  filter: hue-rotate(280deg) contrast(1.1) saturate(1.2);
+}
+
+.theme-matrix {
+  filter: hue-rotate(100deg) saturate(1.5) contrast(1.1);
+}
+
+.theme-sunset {
+  filter: hue-rotate(330deg) saturate(1.4) contrast(1.1);
+}
+
+.theme-glitch {
+  filter: hue-rotate(180deg) contrast(1.2) saturate(1.1);
+}
