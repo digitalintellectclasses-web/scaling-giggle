@@ -1,49 +1,105 @@
 'use client';
 
-import { Activity } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { Cpu, Zap, Activity } from 'lucide-react';
 
 export default function Loading() {
   return (
-    <div className="flex h-full w-full items-center justify-center">
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="flex flex-col items-center justify-center p-8 bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-[28px] shadow-2xl"
-      >
-        <div className="relative mb-6">
-          <div className="absolute inset-0 bg-blue-500/20 blur-xl rounded-full" />
+    <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden bg-[#09090b]">
+      {/* Animated Background Grid */}
+      <div className="absolute inset-0 opacity-[0.03]" 
+           style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, #ffffff 1px, transparent 0)', backgroundSize: '40px 40px' }} />
+      
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="absolute inset-0 bg-gradient-to-t from-blue-500/5 via-transparent to-emerald-500/5"
+      />
+
+      {/* Main Content Container */}
+      <div className="relative flex flex-col items-center">
+        {/* The Core Spinner */}
+        <div className="relative w-32 h-32 mb-12">
+          {/* Ambient Glows */}
+          <div className="absolute inset-0 bg-blue-500/20 blur-[60px] animate-pulse rounded-full" />
+          <div className="absolute inset-0 bg-emerald-500/10 blur-[40px] animate-pulse delay-700 rounded-full" />
+          
+          {/* Outer Ring */}
           <motion.div
             animate={{ rotate: 360 }}
-            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-            className="w-16 h-16 rounded-full border-2 border-zinc-800 border-t-blue-500 flex items-center justify-center relative z-10"
-          >
+            transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+            className="absolute inset-0 rounded-full border-[1px] border-zinc-800 border-t-emerald-500 border-b-blue-500"
+          />
+          
+          {/* Middle Hexagon / Circuitry */}
+          <motion.div
+            animate={{ rotate: -360 }}
+            transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
+            className="absolute inset-4 rounded-full border-[1px] border-dashed border-zinc-700 opacity-50"
+          />
+
+          {/* Center Icon */}
+          <div className="absolute inset-0 flex items-center justify-center">
             <motion.div
-              animate={{ rotate: -360 }}
-              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+              animate={{ 
+                scale: [1, 1.2, 1],
+                filter: ["drop-shadow(0 0 0px #10b981)", "drop-shadow(0 0 15px #10b981)", "drop-shadow(0 0 0px #10b981)"]
+              }}
+              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
             >
-              <Activity className="w-6 h-6 text-emerald-400" />
+              <Activity className="w-10 h-10 text-emerald-500" />
             </motion.div>
+          </div>
+        </div>
+
+        {/* Text Section */}
+        <div className="text-center space-y-4">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <h2 className="text-2xl font-black tracking-[0.2em] text-white uppercase italic flex items-center gap-3">
+              <Zap className="w-5 h-5 text-blue-400 fill-blue-400" />
+              Processing
+            </h2>
+          </motion.div>
+          
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4 }}
+            className="flex items-center justify-center gap-8"
+          >
+            <div className="flex flex-col items-center gap-1">
+              <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">Modules</span>
+              <span className="text-xs font-mono text-zinc-400 italic font-black">SYNCING...</span>
+            </div>
+            <div className="w-px h-8 bg-zinc-800" />
+            <div className="flex flex-col items-center gap-1">
+              <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">Network</span>
+              <span className="text-xs font-mono text-emerald-500 italic font-black">ENCRYPTED</span>
+            </div>
           </motion.div>
         </div>
-        
-        <h3 className="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-zinc-100 to-zinc-400 mb-2">
-          Processing...
-        </h3>
-        <p className="text-xs text-zinc-500 font-medium tracking-wide uppercase">
-          Loading Dashboard Data
-        </p>
 
-        {/* Pulse Bar */}
-        <div className="w-32 h-1 bg-zinc-800 rounded-full mt-6 overflow-hidden">
+        {/* Progress Bar Container */}
+        <div className="mt-12 w-64 h-1.5 bg-zinc-900 rounded-full overflow-hidden border border-zinc-800/50 p-[1px]">
           <motion.div
-            className="h-full bg-gradient-to-r from-blue-500 to-emerald-500 rounded-full"
+            className="h-full bg-gradient-to-r from-blue-500 via-emerald-500 to-blue-500 rounded-full"
             initial={{ x: "-100%" }}
             animate={{ x: "100%" }}
-            transition={{ duration: 1, repeat: Infinity, ease: "easeInOut" }}
+            transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+            style={{ width: '100%' }}
           />
         </div>
-      </motion.div>
+      </div>
+      
+      {/* Corner Tech Decor */}
+      <div className="absolute top-8 left-8 flex items-center gap-3 opacity-20">
+        <Cpu className="w-4 h-4 text-zinc-500" />
+        <span className="text-[10px] font-mono text-zinc-500">SYSTEM_AUTH_ACTIVE</span>
+      </div>
     </div>
   );
 }
