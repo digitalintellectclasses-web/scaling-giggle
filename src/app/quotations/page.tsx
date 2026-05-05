@@ -24,6 +24,9 @@ export default function QuotationsPage() {
   const [quantity, setQuantity] = useState(1);
   const [notes, setNotes] = useState('');
   
+  const [customServiceName, setCustomServiceName] = useState('');
+  const [customRate, setCustomRate] = useState(0);
+  
   const [expiryDays, setExpiryDays] = useState(15);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isEmailing, setIsEmailing] = useState(false);
@@ -41,6 +44,23 @@ export default function QuotationsPage() {
   const total = subtotal + tax;
 
   const handleAddItem = () => {
+    if (selectedService === 'custom') {
+      if (!customServiceName || customRate <= 0 || quantity <= 0) return;
+      setItems([...items, {
+        serviceId: `custom_${Date.now()}`,
+        serviceName: customServiceName,
+        description: 'Custom added service',
+        quantity,
+        rate: customRate,
+        amount: customRate * quantity
+      }]);
+      setSelectedService('');
+      setCustomServiceName('');
+      setCustomRate(0);
+      setQuantity(1);
+      return;
+    }
+
     const srv = services.find(s => s.id === selectedService);
     if (!srv || quantity <= 0) return;
     
@@ -64,20 +84,31 @@ export default function QuotationsPage() {
   const handleDownloadPdf = async (elementRef: React.RefObject<HTMLDivElement | null>, filename: string) => {
     if (typeof window === 'undefined' || !elementRef.current) return;
     setIsGenerating(true);
+    
+    // Give UI a moment to update the loading state before blocking the main thread
+    await new Promise(resolve => setTimeout(resolve, 50));
+    
     try {
+      // Create a clean clone to prevent mutating or locking the active DOM
+      const element = elementRef.current;
       const html2pdf = (await import('html2pdf.js')).default;
+      
       const opt = {
         margin:       0.5,
         filename:     filename,
         image:        { type: 'jpeg' as 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2 },
+        html2canvas:  { scale: 2, useCORS: true, logging: false },
         jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' as 'portrait' }
       };
-      await html2pdf().set(opt).from(elementRef.current).save();
+      
+      // Explicitly wait for save
+      await html2pdf().from(element).set(opt).save();
     } catch (e) {
-      console.error(e);
+      console.error("PDF generation error: ", e);
+      alert("Failed to generate PDF. Please try again or use the print function (Ctrl+P).");
+    } finally {
+      setIsGenerating(false);
     }
-    setIsGenerating(false);
   };
 
   const handleSaveQuotation = async () => {
@@ -216,27 +247,45 @@ export default function QuotationsPage() {
             <div className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-6">
               <h2 className="text-xl font-semibold text-white mb-4">Line Items</h2>
               
-              <div className="flex items-end gap-3 mb-6">
-                <div className="flex-1">
-                  <label className="block text-xs font-medium text-zinc-400 mb-1">Service</label>
-                  <select value={selectedService} onChange={e => setSelectedService(e.target.value)}
-                    className="block w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-white outline-none focus:border-emerald-500 text-sm">
-                    <option value="">-- Select a service --</option>
-                    {services.map(s => <option key={s.id} value={s.id}>{s.name} - ₹{s.rate}</option>)}
-                  </select>
+              <div className="flex flex-col mb-6 gap-3">
+                <div className="flex items-end gap-3">
+                  <div className="flex-1">
+                    <label className="block text-xs font-medium text-zinc-400 mb-1">Service</label>
+                    <select value={selectedService} onChange={e => setSelectedService(e.target.value)}
+                      className="block w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-white outline-none focus:border-emerald-500 text-sm">
+                      <option value="">-- Select a service --</option>
+                      {services.map(s => <option key={s.id} value={s.id}>{s.name} - ₹{s.rate}</option>)}
+                      <option value="custom" className="font-bold text-emerald-400">+ Add Custom Service</option>
+                    </select>
+                  </div>
+                  <div className="w-24">
+                    <label className="block text-xs font-medium text-zinc-400 mb-1">Qty</label>
+                    <input type="number" min="1" value={quantity} onChange={e => setQuantity(Number(e.target.value))}
+                      className="block w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-white outline-none focus:border-emerald-500 text-sm" />
+                  </div>
+                  <button 
+                    onClick={handleAddItem}
+                    disabled={!selectedService}
+                    className="bg-emerald-600 disabled:opacity-50 hover:bg-emerald-500 text-white p-2.5 rounded-xl transition-all h-[42px] mt-auto"
+                  >
+                    <Plus className="w-5 h-5" />
+                  </button>
                 </div>
-                <div className="w-24">
-                  <label className="block text-xs font-medium text-zinc-400 mb-1">Quantity</label>
-                  <input type="number" min="1" value={quantity} onChange={e => setQuantity(Number(e.target.value))}
-                    className="block w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-white outline-none focus:border-emerald-500 text-sm" />
-                </div>
-                <button 
-                  onClick={handleAddItem}
-                  disabled={!selectedService}
-                  className="bg-emerald-600 disabled:opacity-50 hover:bg-emerald-500 text-white p-2.5 rounded-xl transition-all"
-                >
-                  <Plus className="w-5 h-5" />
-                </button>
+
+                {selectedService === 'custom' && (
+                  <div className="flex items-end gap-3 p-3 bg-zinc-950/50 rounded-xl border border-emerald-500/30">
+                    <div className="flex-1">
+                      <label className="block text-[10px] font-medium text-emerald-400 mb-1 uppercase tracking-wider">Custom Service Name</label>
+                      <input type="text" value={customServiceName} onChange={e => setCustomServiceName(e.target.value)} placeholder="e.g. Ad-hoc Consulting"
+                        className="block w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white outline-none focus:border-emerald-500 text-sm" />
+                    </div>
+                    <div className="w-32">
+                      <label className="block text-[10px] font-medium text-emerald-400 mb-1 uppercase tracking-wider">Rate (₹)</label>
+                      <input type="number" min="0" value={customRate} onChange={e => setCustomRate(Number(e.target.value))}
+                        className="block w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white outline-none focus:border-emerald-500 text-sm" />
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -293,7 +342,7 @@ export default function QuotationsPage() {
           {/* Preview Panel */}
           <div className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-6 overflow-x-auto relative">
             <h2 className="text-xl font-semibold text-white mb-4">Document Preview</h2>
-            <div className="bg-white rounded-lg p-10 min-w-[700px] text-zinc-900 shadow-2xl" ref={previewRef} style={{ color: '#0f172a', backgroundColor: '#ffffff', fontFamily: 'system-ui, sans-serif' }}>
+            <div ref={previewRef} style={{ backgroundColor: '#ffffff', color: '#0f172a', padding: '40px', minWidth: '700px', borderRadius: '8px', fontFamily: 'system-ui, sans-serif' }}>
               
               {/* Premium Header */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '4px solid #10b981', paddingBottom: '30px', marginBottom: '40px' }}>
@@ -414,7 +463,20 @@ export default function QuotationsPage() {
 
       {activeTab === 'history' && (
         <div className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-6">
-          <h2 className="text-xl font-semibold text-white mb-6">Saved Quotations</h2>
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+            <h2 className="text-xl font-semibold text-white">Saved Quotations & Invoices</h2>
+            <div className="flex gap-4 mt-4 md:mt-0">
+              <div className="bg-zinc-950 border border-zinc-800 px-4 py-2 rounded-xl text-center">
+                <p className="text-[10px] uppercase text-zinc-500 font-bold tracking-wider mb-1">Total Unpaid</p>
+                <p className="text-sm font-black text-red-400">{formatINR(quotations.filter(q => q.status === 'accepted' && q.paymentStatus !== 'paid').reduce((acc, q) => acc + (q.total - (q.amountPaid || 0)), 0))}</p>
+              </div>
+              <div className="bg-zinc-950 border border-zinc-800 px-4 py-2 rounded-xl text-center">
+                <p className="text-[10px] uppercase text-zinc-500 font-bold tracking-wider mb-1">Total Collected</p>
+                <p className="text-sm font-black text-emerald-400">{formatINR(quotations.filter(q => q.status === 'accepted').reduce((acc, q) => acc + (q.amountPaid || 0), 0))}</p>
+              </div>
+            </div>
+          </div>
+          
           {quotations.length === 0 ? (
             <div className="text-center py-12 text-zinc-500">
               <File className="w-12 h-12 mx-auto mb-4 opacity-20" />
@@ -430,6 +492,8 @@ export default function QuotationsPage() {
                     <th className="py-3 px-4 font-medium">Prepared By</th>
                     <th className="py-3 px-4 font-medium text-right">Total</th>
                     <th className="py-3 px-4 font-medium text-center">Status</th>
+                    <th className="py-3 px-4 font-medium text-center">Payment</th>
+                    <th className="py-3 px-4 font-medium text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -440,14 +504,59 @@ export default function QuotationsPage() {
                       <td className="py-4 px-4 text-zinc-400">{q.createdByName}</td>
                       <td className="py-4 px-4 text-right font-bold text-emerald-400">{formatINR(q.total)}</td>
                       <td className="py-4 px-4 text-center">
-                        <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider
+                        <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider cursor-pointer
                           ${q.status === 'draft' ? 'bg-zinc-500/10 text-zinc-400' : ''}
                           ${q.status === 'sent' ? 'bg-blue-500/10 text-blue-400' : ''}
                           ${q.status === 'accepted' ? 'bg-emerald-500/10 text-emerald-400' : ''}
                           ${q.status === 'rejected' ? 'bg-red-500/10 text-red-400' : ''}
-                        `}>
+                        `} onClick={() => {
+                          const nextStatus: any = { draft: 'sent', sent: 'accepted', accepted: 'rejected', rejected: 'draft' };
+                          updateQuotationStatus(q.id, nextStatus[q.status]);
+                        }}>
                           {q.status}
                         </span>
+                      </td>
+                      <td className="py-4 px-4 text-center">
+                        {q.status === 'accepted' ? (
+                          <div className="flex flex-col items-center">
+                            <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider
+                              ${(!q.paymentStatus || q.paymentStatus === 'unpaid') ? 'bg-red-500/10 text-red-400' : ''}
+                              ${q.paymentStatus === 'partial' ? 'bg-amber-500/10 text-amber-400' : ''}
+                              ${q.paymentStatus === 'paid' ? 'bg-emerald-500/10 text-emerald-400' : ''}
+                            `}>
+                              {q.paymentStatus || 'unpaid'}
+                            </span>
+                            {q.paymentStatus === 'partial' && (
+                              <span className="text-[10px] text-zinc-500 mt-1">{formatINR(q.amountPaid || 0)} / {formatINR(q.total)}</span>
+                            )}
+                            {q.paymentStatus !== 'paid' && new Date(q.expiryDate) < new Date() && (
+                              <span className="mt-1 px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-red-600 text-white animate-pulse">
+                                OVERDUE
+                              </span>
+                            )}
+                          </div>
+                        ) : <span className="text-zinc-600 text-[10px]">-</span>}
+                      </td>
+                      <td className="py-4 px-4 text-right">
+                        {q.status === 'accepted' && (
+                          <button 
+                            onClick={() => {
+                              const amount = prompt(`Enter new amount paid for ${q.clientName} (Total: ${q.total}):`, (q.amountPaid || 0).toString());
+                              if (amount !== null) {
+                                const parsed = parseFloat(amount);
+                                if (!isNaN(parsed) && parsed >= 0) {
+                                  let newStatus: 'unpaid' | 'partial' | 'paid' = 'partial';
+                                  if (parsed === 0) newStatus = 'unpaid';
+                                  if (parsed >= q.total) newStatus = 'paid';
+                                  updateQuotationPayment(q.id, { paymentStatus: newStatus, amountPaid: parsed });
+                                }
+                              }
+                            }}
+                            className="text-xs font-semibold text-blue-400 hover:text-blue-300 bg-blue-500/10 px-2 py-1 rounded transition-colors"
+                          >
+                            Update Payment
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}

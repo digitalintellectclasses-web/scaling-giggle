@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { 
   LayoutDashboard, Wallet, Users, Landmark, LogOut, ShieldCheck, 
   ClipboardList, Bell, Menu, X, Settings,
-  Building2, Activity, BookOpen, FileText, Component
+  Building2, Activity, BookOpen, FileText, Component, PieChart
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
@@ -15,6 +15,7 @@ import { useNotifications } from '@/store/NotificationContext';
 const navigation = [
   { name: 'Dashboard',       href: '/',              icon: LayoutDashboard, adminOnly: true  },
   { name: 'Financials',      href: '/financials',    icon: Wallet,          adminOnly: true  },
+  { name: 'Analytics',       href: '/analytics',     icon: PieChart,        adminOnly: true  },
   { name: 'Work',            href: '/work',          icon: ClipboardList,   adminOnly: false },
   { name: 'Notifications',   href: '/notifications', icon: Activity,        adminOnly: false },
   { name: 'Books (Reports)', href: '/books',         icon: BookOpen,        adminOnly: true  },

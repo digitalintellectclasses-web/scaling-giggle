@@ -10,7 +10,7 @@ const formatINR = (amount: number) => {
 };
 
 export default function FinancialTracking() {
-  const { transactions, addTransaction, deleteTransaction, isAdmin, isLoaded } = useFinance();
+  const { transactions, clients, addTransaction, deleteTransaction, isAdmin, isLoaded } = useFinance();
   
   const [type, setType] = useState<'income' | 'expense'>('income');
   const [amount, setAmount] = useState('');
@@ -30,6 +30,7 @@ export default function FinancialTracking() {
   // New Admin Fields
   const [managedBy, setManagedBy] = useState<'Pratik' | 'Pranav'>('Pratik');
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'online'>('online');
+  const [clientId, setClientId] = useState<string>('');
 
   const INCOME_CATEGORIES = ['Service Retainer', 'Project Fee', 'Consulting', 'Other'];
   const EXPENSE_CATEGORIES = ['Software & Tools', 'Ad Spend', 'Rent & Utilities', 'Freelance/Contractors', 'Payroll', 'Other'];
@@ -51,6 +52,7 @@ export default function FinancialTracking() {
         date,
         managedBy,
         paymentMethod,
+        clientId: clientId || undefined,
       });
     } catch (err) {
       console.error('Failed to add transaction:', err);
@@ -132,6 +134,22 @@ export default function FinancialTracking() {
                 ))}
               </select>
             </div>
+
+            {type === 'income' && (
+              <div>
+                <label className="block text-sm font-medium text-zinc-400 mb-1">Link to Client (Optional)</label>
+                <select
+                  value={clientId}
+                  onChange={(e) => setClientId(e.target.value)}
+                  className="block w-full px-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-white focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                >
+                  <option value="">-- No Client Linked --</option>
+                  {clients.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-3 pt-2">
               <div>

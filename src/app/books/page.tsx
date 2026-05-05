@@ -86,60 +86,60 @@ export default function BooksPage() {
 
       <div className="bg-white rounded-2xl p-8 overflow-x-auto shadow-xl" style={{ minWidth: '800px' }}>
         {/* Printable Area */}
-        <div ref={reportRef} className="bg-white text-zinc-900 p-8">
+        <div ref={reportRef} style={{ backgroundColor: '#ffffff', color: '#18181b', padding: '32px', minHeight: '800px' }}>
           {/* Header */}
-          <div className="flex justify-between items-start border-b-2 border-zinc-200 pb-6 mb-8">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #e4e4e7', paddingBottom: '24px', marginBottom: '32px' }}>
             <div>
-              <h2 className="text-3xl font-bold text-emerald-700">Monthly Financial Report</h2>
-              <p className="text-zinc-500 mt-1">Agency Finance Management</p>
+              <h2 style={{ fontSize: '30px', fontWeight: 'bold', color: '#047857', margin: 0 }}>Monthly Financial Report</h2>
+              <p style={{ color: '#71717a', marginTop: '4px' }}>Agency Finance Management</p>
             </div>
-            <div className="text-right">
-              <p className="font-bold text-zinc-800 text-lg">{format(new Date(y, m), 'MMMM yyyy')}</p>
-              <p className="text-sm text-zinc-500">Generated on {format(new Date(), 'dd MMM, yyyy')}</p>
+            <div style={{ textAlign: 'right' }}>
+              <p style={{ fontWeight: 'bold', color: '#27272a', fontSize: '18px', margin: 0 }}>{format(new Date(y, m), 'MMMM yyyy')}</p>
+              <p style={{ fontSize: '14px', color: '#71717a', margin: 0 }}>Generated on {format(new Date(), 'dd MMM, yyyy')}</p>
             </div>
           </div>
 
           {/* Summary Cards */}
-          <div className="grid grid-cols-3 gap-6 mb-10">
-            <div className="p-6 bg-zinc-50 rounded-xl border border-zinc-100">
-              <p className="text-sm text-zinc-500 font-semibold uppercase">Total Income</p>
-              <p className="text-3xl font-bold text-emerald-600 mt-2">{formatINR(totalIncome)}</p>
+          <div style={{ display: 'flex', gap: '24px', marginBottom: '40px' }}>
+            <div style={{ padding: '24px', backgroundColor: '#fafafa', borderRadius: '12px', border: '1px solid #f4f4f5', flex: 1 }}>
+              <p style={{ fontSize: '14px', color: '#71717a', fontWeight: 600, textTransform: 'uppercase', margin: 0 }}>Total Income</p>
+              <p style={{ fontSize: '30px', fontWeight: 'bold', color: '#059669', marginTop: '8px', marginBottom: 0 }}>{formatINR(totalIncome)}</p>
             </div>
-            <div className="p-6 bg-zinc-50 rounded-xl border border-zinc-100">
-              <p className="text-sm text-zinc-500 font-semibold uppercase">Total Expenses</p>
-              <p className="text-3xl font-bold text-red-600 mt-2">{formatINR(totalExpense)}</p>
+            <div style={{ padding: '24px', backgroundColor: '#fafafa', borderRadius: '12px', border: '1px solid #f4f4f5', flex: 1 }}>
+              <p style={{ fontSize: '14px', color: '#71717a', fontWeight: 600, textTransform: 'uppercase', margin: 0 }}>Total Expenses</p>
+              <p style={{ fontSize: '30px', fontWeight: 'bold', color: '#dc2626', marginTop: '8px', marginBottom: 0 }}>{formatINR(totalExpense)}</p>
             </div>
-            <div className="p-6 bg-zinc-50 rounded-xl border border-zinc-100">
-              <p className="text-sm text-zinc-500 font-semibold uppercase">Net Profit</p>
-              <p className="text-3xl font-bold text-blue-600 mt-2">{formatINR(netProfit)}</p>
+            <div style={{ padding: '24px', backgroundColor: '#fafafa', borderRadius: '12px', border: '1px solid #f4f4f5', flex: 1 }}>
+              <p style={{ fontSize: '14px', color: '#71717a', fontWeight: 600, textTransform: 'uppercase', margin: 0 }}>Net Profit</p>
+              <p style={{ fontSize: '30px', fontWeight: 'bold', color: '#2563eb', marginTop: '8px', marginBottom: 0 }}>{formatINR(netProfit)}</p>
             </div>
           </div>
 
           {/* Transactions List */}
-          <h3 className="text-xl font-bold mb-4">Transaction Ledger</h3>
+          <h3 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '16px' }}>Transaction Ledger</h3>
           {monthlyTransactions.length === 0 ? (
-            <p className="text-zinc-500 py-10 text-center bg-zinc-50 rounded-lg border border-dashed border-zinc-200">
+            <p style={{ color: '#71717a', padding: '40px 0', textAlign: 'center', backgroundColor: '#fafafa', borderRadius: '8px', border: '1px dashed #e4e4e7' }}>
               No transactions recorded for {format(new Date(y, m), 'MMMM yyyy')}.
             </p>
           ) : (
-            <table className="w-full text-left border-collapse">
+            <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
               <thead>
-                <tr className="border-b-2 border-zinc-200 text-zinc-500 text-sm">
-                  <th className="py-3 px-4 font-semibold uppercase">Date</th>
-                  <th className="py-3 px-4 font-semibold uppercase">Description</th>
-                  <th className="py-3 px-4 font-semibold uppercase">Category</th>
-                  <th className="py-3 px-4 font-semibold uppercase">Method</th>
-                  <th className="py-3 px-4 font-semibold uppercase text-right">Amount</th>
+                <tr style={{ borderBottom: '2px solid #e4e4e7', color: '#71717a', fontSize: '14px' }}>
+                  <th style={{ padding: '12px 16px', fontWeight: 600, textTransform: 'uppercase' }}>Date</th>
+                  <th style={{ padding: '12px 16px', fontWeight: 600, textTransform: 'uppercase' }}>Description</th>
+                  <th style={{ padding: '12px 16px', fontWeight: 600, textTransform: 'uppercase' }}>Category</th>
+                  <th style={{ padding: '12px 16px', fontWeight: 600, textTransform: 'uppercase' }}>Method</th>
+                  <th style={{ padding: '12px 16px', fontWeight: 600, textTransform: 'uppercase', textAlign: 'right' }}>Amount</th>
                 </tr>
               </thead>
               <tbody>
                 {monthlyTransactions.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).map(t => (
-                  <tr key={t.id} className="border-b border-zinc-100 text-sm hover:bg-zinc-50">
-                    <td className="py-3 px-4 text-zinc-600 whitespace-nowrap">{format(new Date(t.date), 'dd MMM yyyy')}</td>
-                    <td className="py-3 px-4 font-medium text-zinc-800">{t.description}</td>
-                    <td className="py-3 px-4 text-zinc-600">{t.category}</td>
-                    <td className="py-3 px-4 text-zinc-600 uppercase text-xs">{t.paymentMethod}</td>
-                    <td className={`py-3 px-4 font-bold text-right ${t.type === 'income' ? 'text-emerald-600' : 'text-red-600'}`}>
+                  <tr key={t.id} style={{ borderBottom: '1px solid #f4f4f5', fontSize: '14px' }}>
+                    <td style={{ padding: '12px 16px', color: '#52525b', whiteSpace: 'nowrap' }}>{format(new Date(t.date), 'dd MMM yyyy')}</td>
+                    <td style={{ padding: '12px 16px', fontWeight: 500, color: '#27272a' }}>{t.description}</td>
+                    <td style={{ padding: '12px 16px', color: '#52525b' }}>{t.category}</td>
+                    <td style={{ padding: '12px 16px', color: '#52525b', textTransform: 'uppercase', fontSize: '12px' }}>{t.paymentMethod}</td>
+                    <td style={{ padding: '12px 16px', fontWeight: 'bold', textAlign: 'right', color: t.type === 'income' ? '#059669' : '#dc2626' }}>
                       {t.type === 'income' ? '+' : '-'}{formatINR(t.amount)}
                     </td>
                   </tr>
@@ -148,7 +148,7 @@ export default function BooksPage() {
             </table>
           )}
           
-          <div className="mt-16 pt-8 border-t border-zinc-200 text-center text-zinc-400 text-xs">
+          <div style={{ marginTop: '64px', paddingTop: '32px', borderTop: '1px solid #e4e4e7', textAlign: 'center', color: '#a1a1aa', fontSize: '12px' }}>
             <p>This is a system-generated financial report.</p>
           </div>
         </div>

@@ -37,6 +37,9 @@ export interface Quotation {
   total: number;
   status: 'draft' | 'sent' | 'accepted' | 'rejected';
   notes?: string;
+  paymentStatus?: 'unpaid' | 'partial' | 'paid';
+  amountPaid?: number;
+  dueDate?: string;
 }
 
 interface QuoteContextType {
@@ -47,6 +50,7 @@ interface QuoteContextType {
   deleteService: (id: string) => Promise<void>;
   addQuotation: (quotation: Omit<Quotation, 'id'>) => Promise<void>;
   updateQuotationStatus: (id: string, status: Quotation['status']) => Promise<void>;
+  updateQuotationPayment: (id: string, updates: { paymentStatus: 'unpaid' | 'partial' | 'paid', amountPaid: number }) => Promise<void>;
   deleteQuotation: (id: string) => Promise<void>;
 }
 
@@ -111,6 +115,10 @@ export function QuoteProvider({ children }: { children: React.ReactNode }) {
     await updateDoc(doc(db, 'quotations', id), { status });
   };
 
+  const updateQuotationPayment = async (id: string, updates: { paymentStatus: 'unpaid' | 'partial' | 'paid', amountPaid: number }) => {
+    await updateDoc(doc(db, 'quotations', id), updates);
+  };
+
   const deleteQuotation = async (id: string) => {
     await deleteDoc(doc(db, 'quotations', id));
   };
@@ -119,7 +127,7 @@ export function QuoteProvider({ children }: { children: React.ReactNode }) {
     <QuoteContext.Provider value={{
       services, quotations,
       addService, updateService, deleteService,
-      addQuotation, updateQuotationStatus, deleteQuotation
+      addQuotation, updateQuotationStatus, updateQuotationPayment, deleteQuotation
     }}>
       {children}
     </QuoteContext.Provider>

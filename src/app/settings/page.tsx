@@ -6,10 +6,11 @@ import { useFinance } from '@/store/FinanceContext';
 import {
   Settings, ShieldCheck, Users, Trash2, RefreshCw,
   AlertTriangle, ChevronDown, ChevronUp, Lock, UserCog,
-  Eye, EyeOff, Save, RotateCcw, Info, Crown, User, Palette, Sparkles, Zap
+  Eye, EyeOff, Save, RotateCcw, Info, Crown, User, Palette, Sparkles, Zap,
+  DownloadCloud, Download, Upload
 } from 'lucide-react';
 import { db } from '@/lib/firebase';
-import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { doc, updateDoc, deleteDoc, getDocs, writeBatch, collection } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 
 // ── Helper ──────────────────────────────────────────────────
@@ -81,6 +82,66 @@ export default function SettingsPage() {
   }
 
   // ── Handlers ──────────────────────────────────────────────
+  const handleExportData = async () => {
+    try {
+      const collections = ['transactions', 'clients', 'equities', 'salaries', 'quotations', 'services', 'tasks', 'users'];
+      const data: Record<string, any[]> = {};
+      
+      for (const colName of collections) {
+        const snap = await getDocs(collection(db, colName));
+        data[colName] = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      }
+      
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `agency_backup_${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      alert("Export failed: " + err.message);
+    }
+  };
+
+  const handleImportData = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    if (!confirm('WARNING: Restoring will overwrite existing data. Are you sure you want to proceed?')) {
+      e.target.value = '';
+      return;
+    }
+    
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      const batch = writeBatch(db);
+      
+      let count = 0;
+      for (const [colName, docs] of Object.entries(data)) {
+        if (!Array.isArray(docs)) continue;
+        for (const item of docs) {
+          if (!item.id) continue;
+          batch.set(doc(db, colName, item.id), item);
+          count++;
+          if (count >= 490) {
+            await batch.commit();
+            count = 0;
+          }
+        }
+      }
+      if (count > 0) await batch.commit();
+      
+      alert("✅ Restore successful! Reloading page...");
+      window.location.reload();
+    } catch (err: any) {
+      alert("Restore failed: " + err.message);
+    } finally {
+      e.target.value = '';
+    }
+  };
+
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newPw.length < 6) { setPwMsg('Password must be at least 6 characters.'); return; }
@@ -186,6 +247,31 @@ export default function SettingsPage() {
                 </li>
               ))}
             </ul>
+          </div>
+        </div>
+
+        <div className="mt-4 p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl">
+          <div className="flex items-center gap-2 mb-3">
+            <Eye className="w-4 h-4 text-blue-400" />
+            <h3 className="text-sm font-bold text-blue-300">Admin Impersonation</h3>
+          </div>
+          <p className="text-xs text-zinc-400 mb-4">Temporarily view the dashboard exactly as an employee would see it. To return to Admin, you will need to log out and log back in.</p>
+          <div className="flex flex-wrap gap-2">
+            {employees.length === 0 ? <span className="text-xs text-zinc-500">No employees available.</span> : employees.map(emp => (
+              <button
+                key={emp.id}
+                onClick={() => {
+                  if (confirm(`Switch to employee view as ${emp.displayName}?`)) {
+                    localStorage.setItem('ag_session', JSON.stringify(emp));
+                    localStorage.setItem('ag_isAdmin', 'false');
+                    window.location.href = '/work';
+                  }
+                }}
+                className="px-3 py-1.5 bg-blue-600/20 hover:bg-blue-600/40 border border-blue-500/30 text-blue-400 rounded-lg text-xs font-semibold transition-all"
+              >
+                Log in as {emp.displayName}
+              </button>
+            ))}
           </div>
         </div>
       </Section>
@@ -372,7 +458,28 @@ export default function SettingsPage() {
         <p className="text-[10px] text-zinc-500 mt-4 italic">Note: Themes use advanced CSS filters to re-skin the entire application instantly.</p>
       </Section>
 
-      {/* ── 5. Danger Zone ──────────────────────────────────────── */}
+      {/* ── 5. System Backup & Restore ──────────────────────────────────────── */}
+      <Section title="Backup & Restore" icon={DownloadCloud} defaultOpen={false}>
+        <div className="mt-4 p-4 bg-zinc-900/60 border border-zinc-800 rounded-xl">
+          <p className="text-xs text-zinc-400 mb-4">
+            Export a full JSON backup of all Firestore collections or restore from a previous backup file.
+          </p>
+          <div className="flex gap-4">
+            <button
+              onClick={handleExportData}
+              className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition-all"
+            >
+              <Download className="w-4 h-4" /> Export JSON
+            </button>
+            <label className="flex items-center gap-2 px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold rounded-xl transition-all cursor-pointer">
+              <Upload className="w-4 h-4" /> Restore JSON
+              <input type="file" accept=".json" className="hidden" onChange={handleImportData} />
+            </label>
+          </div>
+        </div>
+      </Section>
+
+      {/* ── 6. Danger Zone ──────────────────────────────────────── */}
       <Section title="Danger Zone" icon={AlertTriangle} defaultOpen={false}>
         <div className="mt-4 space-y-3">
           <div className="p-4 bg-red-500/5 border border-red-500/20 rounded-xl">

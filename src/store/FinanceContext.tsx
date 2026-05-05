@@ -32,6 +32,7 @@ export type Transaction = {
   date: string;
   managedBy: 'Pratik' | 'Pranav';
   paymentMethod: 'cash' | 'online';
+  clientId?: string;
 };
 
 export type Client = {

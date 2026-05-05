@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { 
   LayoutDashboard, Wallet, Users, Settings, LogOut, ShieldCheck,
-  Building2, Activity, BookOpen, FileText, Component, ClipboardList
+  Building2, Activity, BookOpen, FileText, Component, ClipboardList, PieChart, MessageSquare
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
@@ -16,7 +16,9 @@ import { FirebaseIndicator } from '@/components/FirebaseIndicator';
 const navigation = [
   { name: 'Dashboard',       href: '/',              icon: LayoutDashboard, adminOnly: true  },
   { name: 'Financials',      href: '/financials',    icon: Wallet,          adminOnly: true  },
+  { name: 'Analytics',       href: '/analytics',     icon: PieChart,        adminOnly: true  },
   { name: 'Work',            href: '/work',          icon: ClipboardList,   adminOnly: false },
+  { name: 'Team Chat',       href: '/chat',          icon: MessageSquare,   adminOnly: false },
   { name: 'Notifications',   href: '/notifications', icon: Activity,        adminOnly: false },
   { name: 'Books (Reports)', href: '/books',         icon: BookOpen,        adminOnly: true  },
   { name: 'Quotations',      href: '/quotations',    icon: FileText,        adminOnly: false },
