@@ -13,7 +13,7 @@ export default function Loading() {
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="absolute inset-0 bg-gradient-to-t from-blue-500/5 via-transparent to-emerald-500/5"
+        className="absolute inset-0 bg-gradient-to-t from-cyan-500/5 via-transparent to-blue-500/5"
       />
 
       {/* Main Content Container */}
@@ -21,14 +21,14 @@ export default function Loading() {
         {/* The Core Spinner */}
         <div className="relative w-32 h-32 mb-12">
           {/* Ambient Glows */}
-          <div className="absolute inset-0 bg-blue-500/20 blur-[60px] animate-pulse rounded-full" />
-          <div className="absolute inset-0 bg-emerald-500/10 blur-[40px] animate-pulse delay-700 rounded-full" />
+          <div className="absolute inset-0 blur-[60px] animate-pulse rounded-full" style={{ background: 'rgba(0,180,216,0.2)' }} />
+          <div className="absolute inset-0 blur-[40px] animate-pulse delay-700 rounded-full" style={{ background: 'rgba(0,119,182,0.1)' }} />
           
           {/* Outer Ring */}
           <motion.div
             animate={{ rotate: 360 }}
             transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-            className="absolute inset-0 rounded-full border-[1px] border-zinc-800 border-t-emerald-500 border-b-blue-500"
+            className="absolute inset-0 rounded-full border-[1px] border-zinc-800" style={{ borderTopColor: '#00b4d8', borderBottomColor: '#0077b6' }}
           />
           
           {/* Middle Hexagon / Circuitry */}
@@ -43,11 +43,11 @@ export default function Loading() {
             <motion.div
               animate={{ 
                 scale: [1, 1.2, 1],
-                filter: ["drop-shadow(0 0 0px #10b981)", "drop-shadow(0 0 15px #10b981)", "drop-shadow(0 0 0px #10b981)"]
+                filter: ['drop-shadow(0 0 0px #00b4d8)', 'drop-shadow(0 0 15px #00b4d8)', 'drop-shadow(0 0 0px #00b4d8)']
               }}
-              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+              transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
             >
-              <Activity className="w-10 h-10 text-emerald-500" />
+              <Activity className="w-10 h-10" style={{ color: '#00b4d8' }} />
             </motion.div>
           </div>
         </div>
@@ -60,8 +60,8 @@ export default function Loading() {
             transition={{ delay: 0.2 }}
           >
             <h2 className="text-2xl font-black tracking-[0.2em] text-white uppercase italic flex items-center gap-3">
-              <Zap className="w-5 h-5 text-blue-400 fill-blue-400" />
-              Processing
+              <Zap className="w-5 h-5 fill-current" style={{ color: '#00b4d8' }} />
+              Ivory Tech
             </h2>
           </motion.div>
           
@@ -78,7 +78,7 @@ export default function Loading() {
             <div className="w-px h-8 bg-zinc-800" />
             <div className="flex flex-col items-center gap-1">
               <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">Network</span>
-              <span className="text-xs font-mono text-emerald-500 italic font-black">ENCRYPTED</span>
+              <span className="text-xs font-mono italic font-black" style={{ color: '#00b4d8' }}>ENCRYPTED</span>
             </div>
           </motion.div>
         </div>
@@ -86,7 +86,7 @@ export default function Loading() {
         {/* Progress Bar Container */}
         <div className="mt-12 w-64 h-1.5 bg-zinc-900 rounded-full overflow-hidden border border-zinc-800/50 p-[1px]">
           <motion.div
-            className="h-full bg-gradient-to-r from-blue-500 via-emerald-500 to-blue-500 rounded-full"
+            className="h-full rounded-full" style={{ background: 'linear-gradient(90deg, #00b4d8, #0077b6, #00b4d8)' }}
             initial={{ x: "-100%" }}
             animate={{ x: "100%" }}
             transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}

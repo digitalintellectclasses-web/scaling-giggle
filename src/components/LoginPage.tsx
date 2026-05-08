@@ -30,19 +30,24 @@ export function LoginPage() {
   return (
     <div className="min-h-screen bg-[#09090b] flex items-center justify-center p-4">
       {/* Background glow effects */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-emerald-500/5 rounded-full blur-3xl" />
-        <div className="absolute top-2/3 left-1/3 w-[300px] h-[300px] bg-purple-500/5 rounded-full blur-3xl" />
-      </div>
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] rounded-full blur-3xl" style={{ background: 'radial-gradient(circle, rgba(0,180,216,0.07) 0%, transparent 70%)' }} />
+          <div className="absolute top-2/3 left-1/3 w-[300px] h-[300px] rounded-full blur-3xl" style={{ background: 'radial-gradient(circle, rgba(0,119,182,0.06) 0%, transparent 70%)' }} />
+        </div>
 
       <div className="relative w-full max-w-md">
         {/* Logo / Brand */}
         <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-emerald-500 mb-5 shadow-lg shadow-emerald-900/40">
-            <span className="text-black font-extrabold text-2xl">AG</span>
+          {/* Elephant logo ring */}
+          <div className="inline-flex items-center justify-center mb-5 relative">
+            <div className="w-20 h-20 rounded-2xl flex items-center justify-center shadow-2xl" style={{ background: 'linear-gradient(135deg, #00b4d8 0%, #0077b6 60%, #03045e 100%)' }}>
+              <span className="text-white font-black text-2xl tracking-tighter">ITS</span>
+            </div>
+            <div className="absolute -inset-1 rounded-2xl opacity-30 blur-md" style={{ background: 'linear-gradient(135deg, #00b4d8, #0077b6)' }} />
           </div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">Agency Finance</h1>
-          <p className="text-zinc-400 mt-2 text-sm">Sign in to access your portal</p>
+          <h1 className="text-2xl font-black text-white tracking-tight">Ivory Tech Solutions</h1>
+          <p className="text-[11px] font-semibold tracking-[0.2em] uppercase mt-0.5" style={{ color: '#00b4d8' }}>Finance Management Tool</p>
+          <p className="text-zinc-500 mt-3 text-sm">Sign in to access your portal</p>
         </div>
 
         {/* Card */}
@@ -59,7 +64,10 @@ export function LoginPage() {
                 autoComplete="username"
                 value={username}
                 onChange={e => setUsername(e.target.value)}
-                className="block w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white placeholder:text-zinc-600 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all uppercase"
+              className="block w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white placeholder:text-zinc-600 outline-none transition-all uppercase"
+              style={{ '--tw-ring-color': '#00b4d8' } as React.CSSProperties}
+              onFocus={e => e.target.style.borderColor = '#00b4d8'}
+              onBlur={e => e.target.style.borderColor = ''}
                 placeholder="e.g. PPSOLAR"
               />
             </div>
@@ -98,7 +106,8 @@ export function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-900 disabled:cursor-not-allowed text-white py-3 rounded-xl font-semibold transition-all shadow-lg shadow-emerald-900/30 mt-2"
+              className="w-full flex items-center justify-center gap-2 text-white py-3 rounded-xl font-semibold transition-all shadow-lg mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ background: loading ? 'rgba(0,119,182,0.4)' : 'linear-gradient(135deg, #00b4d8, #0077b6)', boxShadow: '0 4px 20px rgba(0,180,216,0.25)' }}
             >
               {loading ? (
                 <><Loader2 className="w-4 h-4 animate-spin" /> Signing in...</>

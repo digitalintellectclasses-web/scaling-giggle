@@ -70,10 +70,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {/* Mobile Top Header (Minimal) */}
         <header className="flex h-14 items-center justify-between border-b border-zinc-800/50 bg-[#0f0f11]/50 px-4 md:hidden backdrop-blur-md sticky top-0 z-40">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded bg-emerald-500 flex items-center justify-center">
-              <span className="text-black font-extrabold text-[10px]">AG</span>
+            <div className="w-7 h-7 rounded flex items-center justify-center flex-shrink-0" style={{ background: 'linear-gradient(135deg, #00b4d8, #0077b6)' }}>
+              <span className="text-white font-extrabold text-[8px] tracking-tight">ITS</span>
             </div>
-            <span className="text-sm font-bold tracking-tight text-white uppercase italic">Finance</span>
+            <div className="leading-none">
+              <span className="text-sm font-black tracking-tight" style={{ color: '#00b4d8' }}>IVORY TECH</span>
+              <span className="text-[9px] font-medium text-zinc-500 ml-1">Finance</span>
+            </div>
           </div>
           <div className="flex items-center gap-2">
              <FirebaseIndicator variant="header" />

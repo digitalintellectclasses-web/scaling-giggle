@@ -20,8 +20,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Agency Finance Dashboard',
-  description: 'Premium Financial Management Dashboard',
+  title: 'Ivory Tech Solutions | Finance Management',
+  description: 'Ivory Tech Solutions — Internal Finance Management Tool',
 };
 
 export default function RootLayout({
