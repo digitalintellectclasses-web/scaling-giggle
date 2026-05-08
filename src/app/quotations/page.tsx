@@ -399,129 +399,164 @@ export default function QuotationsPage() {
           {/* Preview Panel */}
           <div className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-6 overflow-x-auto relative">
             <h2 className="text-xl font-semibold text-white mb-4">Document Preview</h2>
-            <div ref={previewRef} style={{ backgroundColor: '#ffffff', color: '#0f172a', padding: '40px', minWidth: '700px', borderRadius: '8px', fontFamily: 'system-ui, sans-serif' }}>
-              
-              {/* Premium Header */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '4px solid #10b981', paddingBottom: '30px', marginBottom: '40px' }}>
+            <div ref={previewRef} style={{
+              background: 'linear-gradient(135deg, #03071e 0%, #051030 40%, #0a1628 100%)',
+              color: '#ffffff',
+              padding: '48px',
+              minWidth: '700px',
+              borderRadius: '12px',
+              fontFamily: "'Segoe UI', system-ui, sans-serif",
+              position: 'relative',
+              overflow: 'hidden',
+            }}>
+
+              {/* Background circuit glow effects */}
+              <div style={{ position: 'absolute', top: '-80px', right: '-80px', width: '320px', height: '320px', background: 'radial-gradient(circle, rgba(0,180,216,0.12) 0%, transparent 70%)', pointerEvents: 'none' }} />
+              <div style={{ position: 'absolute', bottom: '-60px', left: '-60px', width: '240px', height: '240px', background: 'radial-gradient(circle, rgba(0,119,182,0.10) 0%, transparent 70%)', pointerEvents: 'none' }} />
+
+              {/* ── HEADER ── */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '40px' }}>
+                {/* Left: Big QUOTATION title */}
                 <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-                    <div style={{ width: '40px', height: '40px', backgroundColor: '#10b981', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 900, fontSize: '24px' }}>
+                  <h1 style={{ fontSize: '52px', fontWeight: 900, color: '#ffffff', margin: 0, lineHeight: 1, letterSpacing: '-0.02em' }}>QUOTATION</h1>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '10px' }}>
+                    <div style={{ width: '32px', height: '3px', background: 'linear-gradient(90deg, #00b4d8, #0096c7)', borderRadius: '2px' }} />
+                    <span style={{ fontSize: '13px', color: '#00b4d8', fontWeight: 700, letterSpacing: '0.05em' }}>#QT-{format(new Date(), 'yyyyMM')}-{Math.floor(100 + Math.random() * 900)}</span>
+                  </div>
+                  <div style={{ marginTop: '20px', fontSize: '13px', color: '#90e0ef', lineHeight: '2' }}>
+                    <div style={{ display: 'flex', gap: '20px' }}>
+                      <span style={{ color: '#48cae4', fontWeight: 600 }}>Date</span>
+                      <span style={{ color: '#94a3b8' }}>:</span>
+                      <span>{format(new Date(), 'dd MMM yyyy')}</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: '14px' }}>
+                      <span style={{ color: '#48cae4', fontWeight: 600 }}>Valid Till</span>
+                      <span style={{ color: '#94a3b8' }}>:</span>
+                      <span style={{ color: '#f87171' }}>{format(new Date(Date.now() + expiryDays * 86400000), 'dd MMM yyyy')}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right: Agency Info */}
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px', marginBottom: '10px' }}>
+                    <div>
+                      <p style={{ fontSize: '16px', fontWeight: 900, color: '#ffffff', margin: 0, letterSpacing: '0.05em', textTransform: 'uppercase' }}>{pdfConfig.agencyName}</p>
+                    </div>
+                    <div style={{ width: '38px', height: '38px', background: 'linear-gradient(135deg, #00b4d8, #0077b6)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '18px', color: '#fff', flexShrink: 0 }}>
                       {pdfConfig.agencyName.charAt(0)}
                     </div>
-                    <span style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em' }}>{pdfConfig.agencyName}</span>
                   </div>
-                  <div style={{ fontSize: '13px', color: '#64748b', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>
+                  <div style={{ fontSize: '12px', color: '#90e0ef', lineHeight: '1.8', whiteSpace: 'pre-wrap', textAlign: 'right' }}>
+                    <p style={{ margin: 0 }}>{pdfConfig.website}</p>
                     <p style={{ margin: 0 }}>{pdfConfig.address}</p>
                     <p style={{ margin: 0 }}>{pdfConfig.contact}</p>
                   </div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <h1 style={{ fontSize: '42px', fontWeight: 900, color: '#10b981', margin: 0, lineHeight: 1 }}>QUOTATION</h1>
-                  <p style={{ fontSize: '14px', fontWeight: 600, color: '#94a3b8', marginTop: '8px', margin: 0 }}>REF: #QT-{Math.floor(1000 + Math.random() * 9000)}</p>
-                  <div style={{ marginTop: '20px', fontSize: '14px' }}>
-                    <p style={{ margin: 0 }}><strong>Date:</strong> {format(new Date(), 'dd MMM yyyy')}</p>
-                    <p style={{ margin: 0, color: '#ef4444' }}><strong>Expires:</strong> {format(new Date(Date.now() + expiryDays * 86400000), 'dd MMM yyyy')}</p>
+
+                  {/* Bill To */}
+                  <div style={{ marginTop: '18px', textAlign: 'right' }}>
+                    <p style={{ fontSize: '11px', fontWeight: 800, color: '#00b4d8', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 4px 0' }}>Bill To</p>
+                    <p style={{ fontWeight: 800, fontSize: '16px', color: '#ffffff', margin: 0 }}>{client ? client.name : 'Client Name'}</p>
+                    <p style={{ fontSize: '12px', color: '#90e0ef', margin: 0 }}>{currentUser?.displayName || 'Account Executive'}</p>
                   </div>
                 </div>
               </div>
 
-              {/* Info Section */}
-              <div style={{ display: 'flex', gap: '40px', marginBottom: '40px' }}>
-                <div style={{ flex: 1, backgroundColor: '#f8fafc', padding: '20px', borderRadius: '12px', borderLeft: '4px solid #334155' }}>
-                  <p style={{ fontSize: '11px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px', margin: 0 }}>Client Information</p>
-                  <p style={{ fontWeight: 800, fontSize: '20px', color: '#1e293b', margin: 0 }}>{client ? client.name : 'Client Name'}</p>
-                  <p style={{ fontSize: '14px', color: '#64748b', marginTop: '4px', margin: 0 }}>{client?.email || 'client@example.com'}</p>
-                </div>
-                <div style={{ flex: 1, backgroundColor: '#f8fafc', padding: '20px', borderRadius: '12px', borderLeft: '4px solid #10b981' }}>
-                  <p style={{ fontSize: '11px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px', margin: 0 }}>Account Executive</p>
-                  <p style={{ fontWeight: 800, fontSize: '20px', color: '#1e293b', margin: 0 }}>{currentUser?.displayName || 'Senior Consultant'}</p>
-                  <p style={{ fontSize: '14px', color: '#64748b', marginTop: '4px', margin: 0 }}>Authorized Representative</p>
-                </div>
-              </div>
+              {/* Divider */}
+              <div style={{ height: '1px', background: 'linear-gradient(90deg, transparent, #00b4d8 30%, #0077b6 70%, transparent)', marginBottom: '36px' }} />
 
-              {/* Table Section */}
-              <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '40px', border: '1.5px solid #cbd5e1', borderRadius: '8px', overflow: 'hidden' }}>
-                <colgroup>
-                  <col style={{ width: '55%' }} />
-                  <col style={{ width: '10%' }} />
-                  <col style={{ width: '17.5%' }} />
-                  <col style={{ width: '17.5%' }} />
-                </colgroup>
-                <thead>
-                  <tr style={{ backgroundColor: '#0f172a' }}>
-                    <th style={{ padding: '14px 20px', textAlign: 'left', fontSize: '11px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', borderRight: '1px solid #1e293b' }}>Description of Services</th>
-                    <th style={{ padding: '14px 12px', textAlign: 'center', fontSize: '11px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', borderRight: '1px solid #1e293b' }}>Qty</th>
-                    <th style={{ padding: '14px 16px', textAlign: 'right', fontSize: '11px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', borderRight: '1px solid #1e293b' }}>Unit Price</th>
-                    <th style={{ padding: '14px 16px', textAlign: 'right', fontSize: '11px', fontWeight: 800, color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Amount</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.length === 0 ? (
-                    <tr>
-                      <td colSpan={4} style={{ padding: '60px', textAlign: 'center', color: '#94a3b8', fontStyle: 'italic', fontSize: '14px', border: '1px solid #e2e8f0' }}>
-                        No line items added to this quotation yet.
-                      </td>
-                    </tr>
-                  ) : (
-                    items.map((item, idx) => (
-                      <tr key={idx} style={{ backgroundColor: idx % 2 === 0 ? '#ffffff' : '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                        <td style={{ padding: '18px 20px', borderRight: '1px solid #e2e8f0', verticalAlign: 'top' }}>
-                          <p style={{ fontWeight: 700, color: '#1e293b', fontSize: '14px', margin: 0, marginBottom: '6px' }}>{item.serviceName}</p>
-                          {item.description && (
-                            <p style={{ fontSize: '12.5px', color: '#64748b', margin: 0, whiteSpace: 'pre-wrap', lineHeight: '1.7' }}>{item.description}</p>
-                          )}
-                        </td>
-                        <td style={{ padding: '18px 12px', textAlign: 'center', color: '#475569', fontSize: '14px', fontWeight: 600, borderRight: '1px solid #e2e8f0', verticalAlign: 'top' }}>{item.quantity}</td>
-                        <td style={{ padding: '18px 16px', textAlign: 'right', color: '#475569', fontSize: '14px', borderRight: '1px solid #e2e8f0', verticalAlign: 'top' }}>{formatINR(item.rate)}</td>
-                        <td style={{ padding: '18px 16px', textAlign: 'right', fontWeight: 700, color: '#0f172a', fontSize: '15px', verticalAlign: 'top' }}>{formatINR(item.amount)}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+              {/* ── TABLE ── */}
+              <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(0,180,216,0.2)', borderRadius: '14px', overflow: 'hidden', marginBottom: '32px' }}>
+                {/* Pill Header Row */}
+                <div style={{ display: 'flex', gap: '8px', padding: '14px 20px', background: 'rgba(0,0,0,0.3)', borderBottom: '1px solid rgba(0,180,216,0.15)', alignItems: 'center' }}>
+                  <div style={{ flex: '1 1 55%', background: 'linear-gradient(135deg, #00b4d8, #0096c7)', borderRadius: '50px', padding: '8px 18px', fontSize: '12px', fontWeight: 800, color: '#fff', textAlign: 'left', letterSpacing: '0.04em' }}>Description</div>
+                  <div style={{ flex: '0 0 60px', background: 'linear-gradient(135deg, #00b4d8, #0096c7)', borderRadius: '50px', padding: '8px 0', fontSize: '12px', fontWeight: 800, color: '#fff', textAlign: 'center', letterSpacing: '0.04em' }}>Qty</div>
+                  <div style={{ flex: '0 0 130px', background: 'linear-gradient(135deg, #00b4d8, #0096c7)', borderRadius: '50px', padding: '8px 18px', fontSize: '12px', fontWeight: 800, color: '#fff', textAlign: 'right', letterSpacing: '0.04em' }}>Price</div>
+                  <div style={{ flex: '0 0 130px', background: 'linear-gradient(135deg, #00b4d8, #0096c7)', borderRadius: '50px', padding: '8px 18px', fontSize: '12px', fontWeight: 800, color: '#fff', textAlign: 'right', letterSpacing: '0.04em' }}>Total</div>
+                </div>
 
-              {/* Totals Section */}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '60px' }}>
-                <div style={{ width: '320px', border: '1.5px solid #cbd5e1', borderRadius: '10px', overflow: 'hidden' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 20px', borderBottom: '1px solid #e2e8f0', backgroundColor: '#f8fafc' }}>
-                    <span style={{ color: '#64748b', fontSize: '14px' }}>Subtotal</span>
-                    <span style={{ fontWeight: 600, color: '#1e293b', fontSize: '14px' }}>{formatINR(subtotal)}</span>
+                {/* Rows */}
+                {items.length === 0 ? (
+                  <div style={{ padding: '50px', textAlign: 'center', color: '#64748b', fontStyle: 'italic', fontSize: '14px' }}>
+                    No line items added to this quotation yet.
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 20px', borderBottom: '1px solid #e2e8f0', backgroundColor: '#f8fafc' }}>
-                    <span style={{ color: '#64748b', fontSize: '14px' }}>GST / Tax (18%)</span>
-                    <span style={{ fontWeight: 600, color: '#1e293b', fontSize: '14px' }}>{formatINR(tax)}</span>
+                ) : (
+                  items.map((item, idx) => (
+                    <div key={idx} style={{
+                      display: 'flex',
+                      gap: '8px',
+                      padding: '16px 20px',
+                      alignItems: 'flex-start',
+                      borderBottom: idx < items.length - 1 ? '1px solid rgba(0,180,216,0.08)' : 'none',
+                      background: idx % 2 === 0 ? 'transparent' : 'rgba(0,180,216,0.03)',
+                    }}>
+                      <div style={{ flex: '1 1 55%' }}>
+                        <p style={{ fontWeight: 700, color: '#ffffff', fontSize: '14px', margin: 0, marginBottom: item.description ? '5px' : 0 }}>{item.serviceName}</p>
+                        {item.description && (
+                          <p style={{ fontSize: '12px', color: '#90e0ef', margin: 0, whiteSpace: 'pre-wrap', lineHeight: '1.7' }}>{item.description}</p>
+                        )}
+                      </div>
+                      <div style={{ flex: '0 0 60px', textAlign: 'center', color: '#e0f7fa', fontSize: '14px', fontWeight: 600 }}>{item.quantity}</div>
+                      <div style={{ flex: '0 0 130px', textAlign: 'right', color: '#90e0ef', fontSize: '14px' }}>{formatINR(item.rate)}</div>
+                      <div style={{ flex: '0 0 130px', textAlign: 'right', color: '#ffffff', fontSize: '14px', fontWeight: 700 }}>{formatINR(item.amount)}</div>
+                    </div>
+                  ))
+                )}
+
+                {/* Totals inside table card */}
+                <div style={{ borderTop: '1px solid rgba(0,180,216,0.2)', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', width: '280px' }}>
+                    <span style={{ color: '#90e0ef', fontSize: '13px' }}>Subtotal</span>
+                    <span style={{ color: '#ffffff', fontWeight: 600, fontSize: '13px' }}>{formatINR(subtotal)}</span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px 20px', backgroundColor: '#0f172a' }}>
-                    <span style={{ color: '#10b981', fontWeight: 900, fontSize: '16px', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Total</span>
-                    <span style={{ color: '#10b981', fontWeight: 900, fontSize: '22px' }}>{formatINR(total)}</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', width: '280px' }}>
+                    <span style={{ color: '#90e0ef', fontSize: '13px' }}>GST / Tax (18%)</span>
+                    <span style={{ color: '#ffffff', fontWeight: 600, fontSize: '13px' }}>{formatINR(tax)}</span>
+                  </div>
+                  <div style={{ width: '280px', height: '1px', background: 'rgba(0,180,216,0.3)', margin: '4px 0' }} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', width: '280px' }}>
+                    <span style={{ color: '#00b4d8', fontSize: '16px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Grand Total</span>
+                    <span style={{ color: '#00b4d8', fontSize: '22px', fontWeight: 900 }}>{formatINR(total)}</span>
                   </div>
                 </div>
               </div>
 
-              {/* Footer / Terms Section */}
-              <div style={{ marginTop: 'auto' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px', borderTop: '1px solid #f1f5f9', paddingTop: '30px' }}>
-                  <div>
-                    <p style={{ fontSize: '11px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '10px', margin: 0 }}>Terms & Conditions</p>
-                    <div style={{ fontSize: '12px', color: '#64748b', lineHeight: '1.6' }}>
-                      <p style={{ margin: 0 }}>1. This quotation is valid for {expiryDays} days from the date of issue.</p>
-                      <p style={{ margin: 0 }}>2. 50% advance payment required to commence work.</p>
-                      <p style={{ margin: 0 }}>3. Remaining 50% due upon project completion and approval.</p>
+              {/* ── FOOTER ── */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px', marginTop: '10px' }}>
+                {/* Payment Info */}
+                <div>
+                  <div style={{ display: 'inline-block', background: 'linear-gradient(135deg, #00b4d8, #0096c7)', borderRadius: '50px', padding: '7px 18px', fontSize: '11px', fontWeight: 800, color: '#fff', marginBottom: '14px', letterSpacing: '0.05em' }}>
+                    Payment Information
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#90e0ef', lineHeight: '2.2' }}>
+                    <div style={{ display: 'flex', gap: '16px' }}>
+                      <span style={{ color: '#48cae4', fontWeight: 600, minWidth: '80px' }}>Account</span>
+                      <span style={{ color: '#94a3b8' }}>:</span>
+                      <span>{pdfConfig.agencyName}</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: '16px' }}>
+                      <span style={{ color: '#48cae4', fontWeight: 600, minWidth: '80px' }}>Contact</span>
+                      <span style={{ color: '#94a3b8' }}>:</span>
+                      <span>{pdfConfig.contact}</span>
                     </div>
                   </div>
-                  {notes && (
-                    <div>
-                      <p style={{ fontSize: '11px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '10px', margin: 0 }}>Internal Notes</p>
-                      <p style={{ fontSize: '12px', color: '#64748b', whiteSpace: 'pre-wrap', margin: 0 }}>{notes}</p>
-                    </div>
-                  )}
                 </div>
 
-                <div style={{ textAlign: 'center', marginTop: '60px', padding: '20px', backgroundColor: '#f8fafc', borderRadius: '12px' }}>
-                  <p style={{ fontSize: '14px', fontWeight: 700, color: '#334155', margin: 0 }}>{pdfConfig.footerText}</p>
-                  <p style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px', margin: 0 }}>{pdfConfig.website} | Powered by Agency Dashboard</p>
+                {/* Terms */}
+                <div>
+                  <p style={{ fontWeight: 800, fontSize: '13px', color: '#ffffff', marginBottom: '12px', margin: '0 0 12px 0' }}>Terms and Conditions:</p>
+                  <div style={{ fontSize: '12px', color: '#90e0ef', lineHeight: '1.9' }}>
+                    <p style={{ margin: 0 }}>• This quotation is valid for {expiryDays} days from the date of issue.</p>
+                    <p style={{ margin: 0 }}>• 50% advance payment required to commence work.</p>
+                    <p style={{ margin: 0 }}>• Remaining 50% due upon project completion.</p>
+                    {notes && <p style={{ margin: '8px 0 0 0', color: '#48cae4', fontStyle: 'italic', whiteSpace: 'pre-wrap' }}>{notes}</p>}
+                  </div>
                 </div>
               </div>
+
+              {/* Bottom teal glow line */}
+              <div style={{ height: '3px', background: 'linear-gradient(90deg, transparent, #00b4d8 30%, #0077b6 70%, transparent)', marginTop: '40px', borderRadius: '2px' }} />
+              <p style={{ textAlign: 'center', fontSize: '11px', color: '#475569', marginTop: '12px', margin: '12px 0 0 0' }}>{pdfConfig.website} • {pdfConfig.footerText}</p>
             </div>
           </div>
         </div>
