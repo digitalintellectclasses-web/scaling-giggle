@@ -13,7 +13,7 @@ const formatINR = (amount: number) => {
 
 export default function QuotationsPage() {
   const { clients, isLoaded: financeLoaded } = useFinance();
-  const { services, quotations, addQuotation, pdfConfig } = useQuote();
+  const { services, quotations, addQuotation, updateQuotationStatus, updateQuotationPayment, deleteQuotation, pdfConfig } = useQuote();
   const { currentUser } = useAuth();
   
   const [activeTab, setActiveTab] = useState<'create' | 'history'>('create');
