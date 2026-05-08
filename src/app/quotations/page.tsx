@@ -13,19 +13,22 @@ const formatINR = (amount: number) => {
 
 export default function QuotationsPage() {
   const { clients, isLoaded: financeLoaded } = useFinance();
-  const { services, quotations, addQuotation } = useQuote();
+  const { services, quotations, addQuotation, pdfConfig } = useQuote();
   const { currentUser } = useAuth();
   
   const [activeTab, setActiveTab] = useState<'create' | 'history'>('create');
   
   const [selectedClient, setSelectedClient] = useState('');
+  const [customClientName, setCustomClientName] = useState('');
   const [items, setItems] = useState<QuoteItem[]>([]);
   const [selectedService, setSelectedService] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [notes, setNotes] = useState('');
+  const [briefInfo, setBriefInfo] = useState('');
   
   const [customServiceName, setCustomServiceName] = useState('');
   const [customRate, setCustomRate] = useState(0);
+  const [customBriefInfo, setCustomBriefInfo] = useState('');
   
   const [expiryDays, setExpiryDays] = useState(15);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -37,7 +40,9 @@ export default function QuotationsPage() {
 
   if (!financeLoaded) return <div className="h-full w-full flex items-center justify-center"><div className="animate-spin h-8 w-8 border-2 border-emerald-500 rounded-full border-t-transparent"></div></div>;
 
-  const client = clients.find(c => c.id === selectedClient);
+  const client = selectedClient === 'custom' 
+    ? { id: 'custom', name: customClientName || 'Unnamed Client', email: '' }
+    : clients.find(c => c.id === selectedClient);
   
   const subtotal = items.reduce((acc, item) => acc + item.amount, 0);
   const tax = subtotal * 0.18; // 18% GST (change if needed)
@@ -49,7 +54,7 @@ export default function QuotationsPage() {
       setItems([...items, {
         serviceId: `custom_${Date.now()}`,
         serviceName: customServiceName,
-        description: 'Custom added service',
+        description: customBriefInfo.trim() || 'Custom added service',
         quantity,
         rate: customRate,
         amount: customRate * quantity
@@ -57,6 +62,7 @@ export default function QuotationsPage() {
       setSelectedService('');
       setCustomServiceName('');
       setCustomRate(0);
+      setCustomBriefInfo('');
       setQuantity(1);
       return;
     }
@@ -67,13 +73,14 @@ export default function QuotationsPage() {
     setItems([...items, {
       serviceId: srv.id,
       serviceName: srv.name,
-      description: srv.description,
+      description: briefInfo.trim() || srv.description,
       quantity,
       rate: srv.rate,
       amount: srv.rate * quantity
     }]);
     
     setSelectedService('');
+    setBriefInfo('');
     setQuantity(1);
   };
 
@@ -112,8 +119,8 @@ export default function QuotationsPage() {
   };
 
   const handleSaveQuotation = async () => {
-    if (!selectedClient || items.length === 0 || !currentUser) {
-      alert('Please select a client and add at least one item.');
+    if (!selectedClient || (selectedClient === 'custom' && !customClientName) || items.length === 0 || !currentUser) {
+      alert('Please select a client (or enter a custom name) and add at least one item.');
       return;
     }
     
@@ -141,6 +148,7 @@ export default function QuotationsPage() {
       alert('✓ Quotation saved to history.');
       // Reset form after saving
       setSelectedClient('');
+      setCustomClientName('');
       setItems([]);
       setNotes('');
       setActiveTab('history');
@@ -225,13 +233,32 @@ export default function QuotationsPage() {
             <div className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-6">
               <h2 className="text-xl font-semibold text-white mb-4">Quote Details</h2>
               <div className="space-y-4">
-                <div>
-                  <label className="block text-xs font-medium text-zinc-400 mb-1">Select Client</label>
-                  <select value={selectedClient} onChange={e => setSelectedClient(e.target.value)}
-                    className="block w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-white outline-none focus:border-emerald-500 text-sm">
-                    <option value="">-- Choose a client --</option>
-                    {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-medium text-zinc-400 mb-1">Select Client</label>
+                    <select value={selectedClient} onChange={e => {
+                      setSelectedClient(e.target.value);
+                      if (e.target.value !== 'custom') setCustomClientName('');
+                    }}
+                      className="block w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-white outline-none focus:border-emerald-500 text-sm">
+                      <option value="">-- Choose a client --</option>
+                      {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      <option value="custom" className="font-bold text-emerald-400">+ Add Custom Client</option>
+                    </select>
+                  </div>
+                  
+                  {selectedClient === 'custom' && (
+                    <div className="animate-in fade-in slide-in-from-top-1 duration-200">
+                      <label className="block text-xs font-medium text-emerald-500/80 mb-1">Enter Custom Client Name</label>
+                      <input 
+                        type="text" 
+                        value={customClientName} 
+                        onChange={e => setCustomClientName(e.target.value)}
+                        placeholder="e.g. John Doe / Acme Corp"
+                        className="block w-full px-3 py-2.5 bg-zinc-950 border border-emerald-500/30 rounded-xl text-white outline-none focus:border-emerald-500 text-sm shadow-[0_0_15px_rgba(16,185,129,0.05)]"
+                      />
+                    </div>
+                  )}
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4">
@@ -272,17 +299,42 @@ export default function QuotationsPage() {
                   </button>
                 </div>
 
+                {selectedService && selectedService !== 'custom' && (
+                  <div className="animate-in fade-in slide-in-from-top-1 duration-200">
+                    <label className="block text-[10px] font-medium text-emerald-400 mb-1 uppercase tracking-wider">Brief Info / Scope (optional)</label>
+                    <textarea
+                      value={briefInfo}
+                      onChange={e => setBriefInfo(e.target.value)}
+                      rows={2}
+                      placeholder="Add a specific scope, deliverables, or note for this service line..."
+                      className="block w-full px-3 py-2 bg-zinc-950/50 border border-emerald-500/30 rounded-xl text-white outline-none focus:border-emerald-500 text-sm resize-none shadow-[0_0_15px_rgba(16,185,129,0.05)]"
+                    />
+                  </div>
+                )}
+
                 {selectedService === 'custom' && (
-                  <div className="flex items-end gap-3 p-3 bg-zinc-950/50 rounded-xl border border-emerald-500/30">
-                    <div className="flex-1">
-                      <label className="block text-[10px] font-medium text-emerald-400 mb-1 uppercase tracking-wider">Custom Service Name</label>
-                      <input type="text" value={customServiceName} onChange={e => setCustomServiceName(e.target.value)} placeholder="e.g. Ad-hoc Consulting"
-                        className="block w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white outline-none focus:border-emerald-500 text-sm" />
+                  <div className="flex flex-col gap-3 p-3 bg-zinc-950/50 rounded-xl border border-emerald-500/30">
+                    <div className="flex gap-3">
+                      <div className="flex-1">
+                        <label className="block text-[10px] font-medium text-emerald-400 mb-1 uppercase tracking-wider">Custom Service Name</label>
+                        <input type="text" value={customServiceName} onChange={e => setCustomServiceName(e.target.value)} placeholder="e.g. Ad-hoc Consulting"
+                          className="block w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white outline-none focus:border-emerald-500 text-sm" />
+                      </div>
+                      <div className="w-32">
+                        <label className="block text-[10px] font-medium text-emerald-400 mb-1 uppercase tracking-wider">Rate (₹)</label>
+                        <input type="number" min="0" value={customRate} onChange={e => setCustomRate(Number(e.target.value))}
+                          className="block w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white outline-none focus:border-emerald-500 text-sm" />
+                      </div>
                     </div>
-                    <div className="w-32">
-                      <label className="block text-[10px] font-medium text-emerald-400 mb-1 uppercase tracking-wider">Rate (₹)</label>
-                      <input type="number" min="0" value={customRate} onChange={e => setCustomRate(Number(e.target.value))}
-                        className="block w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white outline-none focus:border-emerald-500 text-sm" />
+                    <div>
+                      <label className="block text-[10px] font-medium text-emerald-400 mb-1 uppercase tracking-wider">Brief Info / Scope (optional)</label>
+                      <textarea
+                        value={customBriefInfo}
+                        onChange={e => setCustomBriefInfo(e.target.value)}
+                        rows={2}
+                        placeholder="Describe scope, deliverables, or any specifics..."
+                        className="block w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white outline-none focus:border-emerald-500 text-sm resize-none"
+                      />
                     </div>
                   </div>
                 )}
@@ -291,14 +343,19 @@ export default function QuotationsPage() {
               <div className="space-y-2">
                 {items.length === 0 && <p className="text-zinc-500 text-sm italic text-center py-4">No items added yet.</p>}
                 {items.map((item, idx) => (
-                  <div key={idx} className="flex items-center justify-between bg-zinc-950 border border-zinc-800 p-3 rounded-xl">
-                    <div>
-                      <p className="text-sm font-semibold text-white">{item.serviceName}</p>
-                      <p className="text-xs text-zinc-500">{item.quantity} x ₹{item.rate}</p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <p className="font-bold text-emerald-400">₹{item.amount}</p>
-                      <button onClick={() => handleRemoveItem(idx)} className="text-zinc-500 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
+                  <div key={idx} className="bg-zinc-950 border border-zinc-800 p-3 rounded-xl">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-white">{item.serviceName}</p>
+                        <p className="text-xs text-zinc-500">{item.quantity} x ₹{item.rate}</p>
+                        {item.description && item.description !== 'Custom added service' && (
+                          <p className="text-xs text-zinc-400 mt-1 italic leading-relaxed line-clamp-2">{item.description}</p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3 flex-shrink-0">
+                        <p className="font-bold text-emerald-400">₹{item.amount}</p>
+                        <button onClick={() => handleRemoveItem(idx)} className="text-zinc-500 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -348,13 +405,14 @@ export default function QuotationsPage() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '4px solid #10b981', paddingBottom: '30px', marginBottom: '40px' }}>
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-                    <div style={{ width: '40px', height: '40px', backgroundColor: '#10b981', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyCenter: 'center', color: 'white', fontWeight: 900, fontSize: '24px' }}>A</div>
-                    <span style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em' }}>PRIME CREATIVE</span>
+                    <div style={{ width: '40px', height: '40px', backgroundColor: '#10b981', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 900, fontSize: '24px' }}>
+                      {pdfConfig.agencyName.charAt(0)}
+                    </div>
+                    <span style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em' }}>{pdfConfig.agencyName}</span>
                   </div>
-                  <div style={{ fontSize: '13px', color: '#64748b', lineHeight: '1.6' }}>
-                    <p style={{ margin: 0 }}>123 Innovation Way, Suite 500</p>
-                    <p style={{ margin: 0 }}>Tech District, Mumbai 400001</p>
-                    <p style={{ margin: 0 }}>+91 98765 43210 | hello@primecreative.com</p>
+                  <div style={{ fontSize: '13px', color: '#64748b', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>
+                    <p style={{ margin: 0 }}>{pdfConfig.address}</p>
+                    <p style={{ margin: 0 }}>{pdfConfig.contact}</p>
                   </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
@@ -382,32 +440,40 @@ export default function QuotationsPage() {
               </div>
 
               {/* Table Section */}
-              <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '40px' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '40px', border: '1.5px solid #cbd5e1', borderRadius: '8px', overflow: 'hidden' }}>
+                <colgroup>
+                  <col style={{ width: '55%' }} />
+                  <col style={{ width: '10%' }} />
+                  <col style={{ width: '17.5%' }} />
+                  <col style={{ width: '17.5%' }} />
+                </colgroup>
                 <thead>
-                  <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
-                    <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Description of Services</th>
-                    <th style={{ padding: '16px', textAlign: 'center', fontSize: '12px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', width: '80px' }}>Qty</th>
-                    <th style={{ padding: '16px', textAlign: 'right', fontSize: '12px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', width: '140px' }}>Unit Price</th>
-                    <th style={{ padding: '16px', textAlign: 'right', fontSize: '12px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', width: '140px' }}>Amount</th>
+                  <tr style={{ backgroundColor: '#0f172a' }}>
+                    <th style={{ padding: '14px 20px', textAlign: 'left', fontSize: '11px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', borderRight: '1px solid #1e293b' }}>Description of Services</th>
+                    <th style={{ padding: '14px 12px', textAlign: 'center', fontSize: '11px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', borderRight: '1px solid #1e293b' }}>Qty</th>
+                    <th style={{ padding: '14px 16px', textAlign: 'right', fontSize: '11px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', borderRight: '1px solid #1e293b' }}>Unit Price</th>
+                    <th style={{ padding: '14px 16px', textAlign: 'right', fontSize: '11px', fontWeight: 800, color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Amount</th>
                   </tr>
                 </thead>
                 <tbody>
                   {items.length === 0 ? (
                     <tr>
-                      <td colSpan={4} style={{ padding: '60px', textAlign: 'center', color: '#94a3b8', fontStyle: 'italic', fontSize: '15px' }}>
+                      <td colSpan={4} style={{ padding: '60px', textAlign: 'center', color: '#94a3b8', fontStyle: 'italic', fontSize: '14px', border: '1px solid #e2e8f0' }}>
                         No line items added to this quotation yet.
                       </td>
                     </tr>
                   ) : (
                     items.map((item, idx) => (
-                      <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9', backgroundColor: idx % 2 === 0 ? '#ffffff' : '#fcfcfc' }}>
-                        <td style={{ padding: '20px 16px' }}>
-                          <p style={{ fontWeight: 700, color: '#1e293b', fontSize: '15px', margin: 0 }}>{item.serviceName}</p>
-                          <p style={{ fontSize: '13px', color: '#64748b', marginTop: '4px', margin: 0, maxWidth: '400px' }}>{item.description}</p>
+                      <tr key={idx} style={{ backgroundColor: idx % 2 === 0 ? '#ffffff' : '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                        <td style={{ padding: '18px 20px', borderRight: '1px solid #e2e8f0', verticalAlign: 'top' }}>
+                          <p style={{ fontWeight: 700, color: '#1e293b', fontSize: '14px', margin: 0, marginBottom: '6px' }}>{item.serviceName}</p>
+                          {item.description && (
+                            <p style={{ fontSize: '12.5px', color: '#64748b', margin: 0, whiteSpace: 'pre-wrap', lineHeight: '1.7' }}>{item.description}</p>
+                          )}
                         </td>
-                        <td style={{ padding: '20px 16px', textAlign: 'center', color: '#475569', fontSize: '15px' }}>{item.quantity}</td>
-                        <td style={{ padding: '20px 16px', textAlign: 'right', color: '#475569', fontSize: '15px' }}>{formatINR(item.rate)}</td>
-                        <td style={{ padding: '20px 16px', textAlign: 'right', fontWeight: 700, color: '#0f172a', fontSize: '16px' }}>{formatINR(item.amount)}</td>
+                        <td style={{ padding: '18px 12px', textAlign: 'center', color: '#475569', fontSize: '14px', fontWeight: 600, borderRight: '1px solid #e2e8f0', verticalAlign: 'top' }}>{item.quantity}</td>
+                        <td style={{ padding: '18px 16px', textAlign: 'right', color: '#475569', fontSize: '14px', borderRight: '1px solid #e2e8f0', verticalAlign: 'top' }}>{formatINR(item.rate)}</td>
+                        <td style={{ padding: '18px 16px', textAlign: 'right', fontWeight: 700, color: '#0f172a', fontSize: '15px', verticalAlign: 'top' }}>{formatINR(item.amount)}</td>
                       </tr>
                     ))
                   )}
@@ -415,19 +481,19 @@ export default function QuotationsPage() {
               </table>
 
               {/* Totals Section */}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '80px', padding: '0 16px', marginBottom: '60px' }}>
-                <div style={{ width: '300px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', fontSize: '15px', marginBottom: '12px' }}>
-                    <span>Subtotal</span>
-                    <span style={{ fontWeight: 600 }}>{formatINR(subtotal)}</span>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '60px' }}>
+                <div style={{ width: '320px', border: '1.5px solid #cbd5e1', borderRadius: '10px', overflow: 'hidden' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 20px', borderBottom: '1px solid #e2e8f0', backgroundColor: '#f8fafc' }}>
+                    <span style={{ color: '#64748b', fontSize: '14px' }}>Subtotal</span>
+                    <span style={{ fontWeight: 600, color: '#1e293b', fontSize: '14px' }}>{formatINR(subtotal)}</span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', fontSize: '15px', marginBottom: '12px' }}>
-                    <span>GST / Sales Tax (18%)</span>
-                    <span style={{ fontWeight: 600 }}>{formatINR(tax)}</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 20px', borderBottom: '1px solid #e2e8f0', backgroundColor: '#f8fafc' }}>
+                    <span style={{ color: '#64748b', fontSize: '14px' }}>GST / Tax (18%)</span>
+                    <span style={{ fontWeight: 600, color: '#1e293b', fontSize: '14px' }}>{formatINR(tax)}</span>
                   </div>
-                  <div style={{ borderTop: '2px solid #e2e8f0', marginTop: '16px', paddingTop: '16px', display: 'flex', justifyContent: 'space-between', color: '#10b981', fontWeight: 900, fontSize: '28px' }}>
-                    <span>TOTAL</span>
-                    <span>{formatINR(total)}</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px 20px', backgroundColor: '#0f172a' }}>
+                    <span style={{ color: '#10b981', fontWeight: 900, fontSize: '16px', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Total</span>
+                    <span style={{ color: '#10b981', fontWeight: 900, fontSize: '22px' }}>{formatINR(total)}</span>
                   </div>
                 </div>
               </div>
@@ -452,8 +518,8 @@ export default function QuotationsPage() {
                 </div>
 
                 <div style={{ textAlign: 'center', marginTop: '60px', padding: '20px', backgroundColor: '#f8fafc', borderRadius: '12px' }}>
-                  <p style={{ fontSize: '14px', fontWeight: 700, color: '#334155', margin: 0 }}>Thank you for choosing Prime Creative Agency.</p>
-                  <p style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px', margin: 0 }}>www.primecreative.com | Powered by Agency Dashboard</p>
+                  <p style={{ fontSize: '14px', fontWeight: 700, color: '#334155', margin: 0 }}>{pdfConfig.footerText}</p>
+                  <p style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px', margin: 0 }}>{pdfConfig.website} | Powered by Agency Dashboard</p>
                 </div>
               </div>
             </div>

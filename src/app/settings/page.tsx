@@ -3,11 +3,12 @@
 import { useState } from 'react';
 import { useAuth } from '@/store/AuthContext';
 import { useFinance } from '@/store/FinanceContext';
+import { useQuote } from '@/store/QuoteContext';
 import {
   Settings, ShieldCheck, Users, Trash2, RefreshCw,
   AlertTriangle, ChevronDown, ChevronUp, Lock, UserCog,
   Eye, EyeOff, Save, RotateCcw, Info, Crown, User, Palette, Sparkles, Zap,
-  DownloadCloud, Download, Upload
+  DownloadCloud, Download, Upload, FileText
 } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { doc, updateDoc, deleteDoc, getDocs, writeBatch, collection } from 'firebase/firestore';
@@ -54,6 +55,7 @@ const Section = ({ title, icon: Icon, children, defaultOpen = true }:
 export default function SettingsPage() {
   const { users, currentUser, updatePassword } = useAuth();
   const { isAdmin, requestGlobalReset } = useFinance();
+  const { pdfConfig, updatePdfConfig } = useQuote();
 
   // Password change
   const [showPwForm, setShowPwForm] = useState(false);
@@ -426,7 +428,68 @@ export default function SettingsPage() {
         </div>
       </Section>
 
-      {/* ── 4. Visual Themes ───────────────────────────────────── */}
+      {/* ── 4. PDF Branding Configuration ────────────────────────── */}
+      <Section title="PDF Branding & Quotation Setup" icon={FileText}>
+        <div className="mt-4 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1.5">Agency / Company Name</label>
+              <input 
+                type="text" 
+                value={pdfConfig.agencyName} 
+                onChange={e => updatePdfConfig({ agencyName: e.target.value })}
+                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-emerald-500 transition-all"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1.5">Website URL</label>
+              <input 
+                type="text" 
+                value={pdfConfig.website} 
+                onChange={e => updatePdfConfig({ website: e.target.value })}
+                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-emerald-500 transition-all"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1.5">Office Address</label>
+            <textarea 
+              rows={2}
+              value={pdfConfig.address} 
+              onChange={e => updatePdfConfig({ address: e.target.value })}
+              className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-emerald-500 transition-all resize-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1.5">Contact Details (Phone / Email)</label>
+            <input 
+              type="text" 
+              value={pdfConfig.contact} 
+              onChange={e => updatePdfConfig({ contact: e.target.value })}
+              className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-emerald-500 transition-all"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1.5">PDF Footer Message</label>
+            <textarea 
+              rows={2}
+              value={pdfConfig.footerText} 
+              onChange={e => updatePdfConfig({ footerText: e.target.value })}
+              className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-emerald-500 transition-all resize-none"
+            />
+          </div>
+
+          <div className="p-3 bg-emerald-500/5 border border-emerald-500/20 rounded-xl flex items-center gap-3">
+            <Sparkles className="w-4 h-4 text-emerald-400" />
+            <p className="text-[10px] text-zinc-400 uppercase font-bold tracking-widest">Live Updates Enabled: Changes are saved instantly and applied to all new PDFs.</p>
+          </div>
+        </div>
+      </Section>
+
+      {/* ── 5. Visual Themes ───────────────────────────────────── */}
       <Section title="Interface Aesthetics (Themes)" icon={Palette}>
         <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[

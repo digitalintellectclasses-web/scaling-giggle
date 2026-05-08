@@ -99,7 +99,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto overflow-x-hidden relative scroll-smooth">
+        <main id="main-scroll" className="flex-1 overflow-y-auto overflow-x-hidden relative scroll-smooth">
           <div className="px-4 py-6 md:p-10 pb-28 md:pb-10">
             {children}
           </div>

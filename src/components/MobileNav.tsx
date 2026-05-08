@@ -23,7 +23,6 @@ const navigation = [
   { name: 'Services',        href: '/services',      icon: Component,       adminOnly: true  },
   { name: 'Partner Equity',  href: '/equity',        icon: Building2,       adminOnly: true  },
   { name: 'Employees',       href: '/employees',     icon: Users,           adminOnly: true  },
-  { name: 'Clients',       href: '/clients',     icon: Users,           adminOnly: false },
   { name: 'Settings',      href: '/settings',    icon: Settings,        adminOnly: true  },
 ];
 

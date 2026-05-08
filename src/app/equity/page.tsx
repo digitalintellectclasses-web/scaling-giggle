@@ -1,47 +1,116 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useFinance } from '@/store/FinanceContext';
-import { Landmark, ArrowUpRight, ArrowDownRight, IndianRupee } from 'lucide-react';
+import { db } from '@/lib/firebase';
+import { doc, setDoc } from 'firebase/firestore';
+import { Landmark, ArrowUpRight, ArrowDownRight, Calendar, TrendingUp, TrendingDown, Scale, CheckCircle2, X } from 'lucide-react';
 import { format } from 'date-fns';
 
-const formatINR = (amount: number) => {
-  return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount);
-};
+const fmt = (n: number) =>
+  new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n);
+
+const PARTNERS = ['Pratik', 'Pranav'] as const;
+type Partner = typeof PARTNERS[number];
 
 export default function EquityLedger() {
-  const { equities, addEquity, isAdmin, isLoaded } = useFinance();
-  
-  const [partnerId, setPartnerId] = useState<'Pratik' | 'Pranav'>('Pratik');
+  const { equities, transactions, addEquity, isAdmin, isLoaded } = useFinance();
+
+  // ── Form state ──
+  const [partnerId, setPartnerId] = useState<Partner>('Pratik');
   const [type, setType] = useState<'investment' | 'drawing'>('investment');
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [autoCreateTx, setAutoCreateTx] = useState(true);
+
+  // ── Settle modal state ──
+  const [showSettle, setShowSettle] = useState(false);
+  const [settleNote, setSettleNote] = useState('');
+  const [settleDate, setSettleDate] = useState(new Date().toISOString().split('T')[0]);
+  const [settleLoading, setSettleLoading] = useState(false);
+
+  // ── Ledger tab ──
+  const [activeTab, setActiveTab] = useState<Partner>('Pratik');
+
+  // ── Core financials ──
+  const firmIncome = useMemo(() =>
+    transactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0),
+    [transactions]);
+
+  const firmExpenses = useMemo(() =>
+    transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0),
+    [transactions]);
+
+  const firmNet = firmIncome - firmExpenses; // positive = profit, negative = deficit
+  const partnerShare = firmNet / 2; // each partner's 50% of firm P&L
+
+  // ── Per-partner equity stats ──
+  const getStats = (pid: Partner) => {
+    const invested = equities
+      .filter(e => e.partnerId === pid && e.type === 'investment')
+      .reduce((s, e) => s + e.amount, 0);
+
+    const drawn = equities
+      .filter(e => e.partnerId === pid && e.type === 'drawing')
+      .reduce((s, e) => s + e.amount, 0);
+
+    // What they actually managed/paid in expenses (their sweat/cash in firm ops)
+    const managed = transactions
+      .filter(t => t.type === 'expense' && t.managedBy === pid)
+      .reduce((s, t) => s + t.amount, 0);
+
+    // Total put in = manual investments + expenses they managed
+    const totalIn = invested + managed;
+    // Total gained = drawings + their 50% share of firm profit
+    const totalGain = drawn + (partnerShare > 0 ? partnerShare : 0);
+    // Net position: positive = firm owes them, negative = they owe firm
+    const netPosition = totalIn - totalGain;
+
+    return { invested, drawn, managed, totalIn, totalGain, netPosition };
+  };
+
+  const statsPratik = getStats('Pratik');
+  const statsPranav = getStats('Pranav');
+
+  // Settlement: difference between partners' net positions
+  // If Pratik's netPosition > Pranav's, Pranav owes Pratik half the difference
+  const settlementAmount = Math.abs(statsPratik.netPosition - statsPranav.netPosition) / 2;
+  const creditor: Partner = statsPratik.netPosition > statsPranav.netPosition ? 'Pratik' : 'Pranav';
+  const debtor: Partner = creditor === 'Pratik' ? 'Pranav' : 'Pratik';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!amount || isNaN(Number(amount))) return;
-    
-    await addEquity({
-      partnerId,
-      type,
-      amount: Number(amount),
-      date,
-    });
+    await addEquity({ partnerId, type, amount: Number(amount), date }, autoCreateTx);
     setAmount('');
   };
 
-  const getPartnerStats = (pid: 'Pratik' | 'Pranav') => {
-    const partnerEquities = equities.filter(e => e.partnerId === pid);
-    const totalInvestment = partnerEquities.filter(e => e.type === 'investment').reduce((acc, curr) => acc + curr.amount, 0);
-    const totalDrawing = partnerEquities.filter(e => e.type === 'drawing').reduce((acc, curr) => acc + curr.amount, 0);
-    const balance = totalInvestment - totalDrawing;
-    const recoupPercentage = totalInvestment > 0 ? Math.min((totalDrawing / totalInvestment) * 100, 100) : 0;
-
-    return { totalInvestment, totalDrawing, balance, recoupPercentage };
+  const handleSettle = async () => {
+    if (settlementAmount < 1) return;
+    setSettleLoading(true);
+    try {
+      // Debtor records a drawing (paying out), creditor records an investment (receiving)
+      const id1 = crypto.randomUUID();
+      const id2 = crypto.randomUUID();
+      await setDoc(doc(db, 'equities', id1), {
+        id: id1, partnerId: debtor, type: 'drawing',
+        amount: settlementAmount, date: settleDate,
+        note: settleNote || `Settlement payment to ${creditor}`
+      });
+      await setDoc(doc(db, 'equities', id2), {
+        id: id2, partnerId: creditor, type: 'investment',
+        amount: settlementAmount, date: settleDate,
+        note: settleNote || `Settlement received from ${debtor}`
+      });
+      setShowSettle(false);
+      setSettleNote('');
+      alert(`✓ Settlement of ${fmt(settlementAmount)} recorded. ${debtor} → ${creditor}.`);
+    } catch (err: any) {
+      alert('Error: ' + err.message);
+    } finally {
+      setSettleLoading(false);
+    }
   };
-
-  const statsPratik = getPartnerStats('Pratik');
-  const statsPranav = getPartnerStats('Pranav');
 
   if (!isLoaded) return null;
 
@@ -51,203 +120,236 @@ export default function EquityLedger() {
         <div className="bg-zinc-900/50 border border-red-500/20 p-8 rounded-2xl text-center max-w-sm">
           <Landmark className="w-12 h-12 text-red-500/50 mx-auto mb-4" />
           <h2 className="text-xl font-bold text-white mb-2">Restricted Access</h2>
-          <p className="text-zinc-400 text-sm">You must be in Admin Mode to view Partner Equity Ledgers.</p>
+          <p className="text-zinc-400 text-sm">Admin mode required to view Partner Equity.</p>
         </div>
       </div>
     );
   }
 
+  const renderPartnerCard = (pid: Partner, stats: ReturnType<typeof getStats>, accent: string) => (
+    <div className={`bg-zinc-900/40 border border-zinc-800 rounded-2xl p-6 space-y-4`}>
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-bold text-white">{pid}</h2>
+        <span className={`px-3 py-1 rounded-lg text-sm font-bold ${accent === 'emerald' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-blue-500/10 text-blue-400'}`}>50%</span>
+      </div>
+
+      {/* Net Position */}
+      <div className={`p-4 rounded-xl border ${stats.netPosition >= 0 ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-red-500/5 border-red-500/20'}`}>
+        <p className="text-xs text-zinc-500 mb-1 uppercase tracking-wider font-semibold">Net Position</p>
+        <p className={`text-2xl font-black ${stats.netPosition >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{fmt(Math.abs(stats.netPosition))}</p>
+        <p className="text-xs text-zinc-500 mt-1">{stats.netPosition >= 0 ? '← Firm owes this partner' : '← Partner owes the firm'}</p>
+      </div>
+
+      {/* Investment vs Gain */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+          <div className="flex items-center gap-1.5 mb-2">
+            <ArrowUpRight className="w-4 h-4 text-emerald-400" />
+            <span className="text-xs text-zinc-500 font-semibold uppercase tracking-wide">Total Put In</span>
+          </div>
+          <p className="text-emerald-400 font-bold text-lg">{fmt(stats.totalIn)}</p>
+          <div className="mt-2 space-y-1 text-[10px] text-zinc-600">
+            <div className="flex justify-between"><span>Manual investment</span><span>{fmt(stats.invested)}</span></div>
+            <div className="flex justify-between"><span>Expenses managed</span><span>{fmt(stats.managed)}</span></div>
+          </div>
+        </div>
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+          <div className="flex items-center gap-1.5 mb-2">
+            <ArrowDownRight className="w-4 h-4 text-blue-400" />
+            <span className="text-xs text-zinc-500 font-semibold uppercase tracking-wide">Total Gained</span>
+          </div>
+          <p className="text-blue-400 font-bold text-lg">{fmt(stats.totalGain)}</p>
+          <div className="mt-2 space-y-1 text-[10px] text-zinc-600">
+            <div className="flex justify-between"><span>Drawings</span><span>{fmt(stats.drawn)}</span></div>
+            <div className="flex justify-between"><span>50% profit share</span><span>{fmt(Math.max(0, partnerShare))}</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-6 pb-20 max-w-6xl mx-auto">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Partner Equity</h1>
-        <p className="text-zinc-400">Track investments, drawings, and calculate real-time equity balances for Pratik and Pranav.</p>
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Partner Equity</h1>
+          <p className="text-zinc-400 text-sm">Fair accounting — firm P&L distributes equally. Partner expenses are counted as contributions.</p>
+        </div>
+        {settlementAmount > 0.5 && (
+          <button onClick={() => setShowSettle(true)}
+            className="flex items-center gap-2 px-5 py-2.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 rounded-xl text-sm font-bold transition-all">
+            <Scale className="w-4 h-4" /> Settle Balance
+          </button>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        
-        {/* Pratik Card */}
-        <div className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-6 relative overflow-hidden group">
-          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-bold text-white">Pratik</h2>
-            <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-400 font-bold">50%</div>
+      {/* Firm Health */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[
+          { label: 'Firm Income', value: firmIncome, color: 'text-emerald-400', icon: <TrendingUp className="w-4 h-4" /> },
+          { label: 'Firm Expenses', value: firmExpenses, color: 'text-red-400', icon: <TrendingDown className="w-4 h-4" /> },
+          { label: 'Net P&L', value: firmNet, color: firmNet >= 0 ? 'text-emerald-400' : 'text-red-400', icon: <Scale className="w-4 h-4" /> },
+          { label: 'Each Partner Share', value: partnerShare, color: partnerShare >= 0 ? 'text-blue-400' : 'text-amber-400', icon: <Landmark className="w-4 h-4" /> },
+        ].map(s => (
+          <div key={s.label} className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-4">
+            <div className="flex items-center gap-2 mb-2 text-zinc-500">{s.icon}<span className="text-xs font-semibold uppercase tracking-wider">{s.label}</span></div>
+            <p className={`text-xl font-black ${s.color}`}>{fmt(Math.abs(s.value))}</p>
+            {s.label === 'Net P&L' && firmNet < 0 && <p className="text-[10px] text-amber-400 mt-1">⚠ Deficit — partners covering the gap</p>}
           </div>
-          
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <span className="text-zinc-400 text-sm">Equity Balance</span>
-              <span className="text-2xl font-bold text-white">{formatINR(statsPratik.balance)}</span>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-                <span className="text-zinc-500 text-xs block mb-1">Total Investments</span>
-                <span className="text-emerald-400 font-semibold">{formatINR(statsPratik.totalInvestment)}</span>
-              </div>
-              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-                <span className="text-zinc-500 text-xs block mb-1">Total Drawings</span>
-                <span className="text-red-400 font-semibold">{formatINR(statsPratik.totalDrawing)}</span>
-              </div>
-            </div>
-
-            <div className="mt-6 pt-4 border-t border-zinc-800/50">
-               <div className="flex justify-between text-xs mb-2">
-                 <span className="text-zinc-400">Capital Recouped</span>
-                 <span className="text-emerald-400 font-medium">{statsPratik.recoupPercentage.toFixed(1)}%</span>
-               </div>
-               <div className="w-full bg-zinc-900 rounded-full h-2.5 overflow-hidden border border-zinc-800">
-                 <div className="bg-emerald-500 h-2.5 rounded-full transition-all duration-500" style={{ width: `${statsPratik.recoupPercentage}%` }}></div>
-               </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Pranav Card */}
-        <div className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-6 relative overflow-hidden group">
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-bold text-white">Pranav</h2>
-            <div className="p-2 bg-blue-500/10 rounded-lg text-blue-400 font-bold">50%</div>
-          </div>
-          
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <span className="text-zinc-400 text-sm">Equity Balance</span>
-              <span className="text-2xl font-bold text-white">{formatINR(statsPranav.balance)}</span>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-                <span className="text-zinc-500 text-xs block mb-1">Total Investments</span>
-                <span className="text-emerald-400 font-semibold">{formatINR(statsPranav.totalInvestment)}</span>
-              </div>
-              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-                <span className="text-zinc-500 text-xs block mb-1">Total Drawings</span>
-                <span className="text-red-400 font-semibold">{formatINR(statsPranav.totalDrawing)}</span>
-              </div>
-            </div>
-
-            <div className="mt-6 pt-4 border-t border-zinc-800/50">
-               <div className="flex justify-between text-xs mb-2">
-                 <span className="text-zinc-400">Capital Recouped</span>
-                 <span className="text-blue-400 font-medium">{statsPranav.recoupPercentage.toFixed(1)}%</span>
-               </div>
-               <div className="w-full bg-zinc-900 rounded-full h-2.5 overflow-hidden border border-zinc-800">
-                 <div className="bg-blue-500 h-2.5 rounded-full transition-all duration-500" style={{ width: `${statsPranav.recoupPercentage}%` }}></div>
-               </div>
-            </div>
-          </div>
-        </div>
-
+        ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pt-8">
-        
+      {/* Partner Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {renderPartnerCard('Pratik', statsPratik, 'emerald')}
+        {renderPartnerCard('Pranav', statsPranav, 'blue')}
+      </div>
+
+      {/* Bottom: Form + Ledger */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-2">
+
         {/* Form */}
-        <div className="col-span-1 border border-zinc-800 bg-zinc-900/40 rounded-2xl p-6 h-fit">
-          <h2 className="text-xl font-semibold text-white mb-6">Record Flow</h2>
-          
+        <div className="border border-zinc-800 bg-zinc-900/40 rounded-2xl p-6 h-fit">
+          <h2 className="text-lg font-semibold text-white mb-5">Record Equity Flow</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-2 p-1 bg-zinc-900 border border-zinc-800 rounded-lg mb-6">
-              <button
-                type="button"
-                className={`py-2 text-sm font-medium rounded-md transition-all ${partnerId === 'Pratik' ? 'bg-zinc-700 text-white' : 'text-zinc-400 hover:text-white'}`}
-                onClick={() => setPartnerId('Pratik')}
-              >
-                Pratik
-              </button>
-              <button
-                type="button"
-                className={`py-2 text-sm font-medium rounded-md transition-all ${partnerId === 'Pranav' ? 'bg-zinc-700 text-white' : 'text-zinc-400 hover:text-white'}`}
-                onClick={() => setPartnerId('Pranav')}
-              >
-                Pranav
-              </button>
+            <div className="grid grid-cols-2 gap-2 p-1 bg-zinc-900 border border-zinc-800 rounded-lg">
+              {PARTNERS.map(p => (
+                <button key={p} type="button" onClick={() => setPartnerId(p)}
+                  className={`py-2 text-sm font-medium rounded-md transition-all ${partnerId === p ? 'bg-zinc-700 text-white' : 'text-zinc-400 hover:text-white'}`}>{p}</button>
+              ))}
             </div>
-
             <div>
-              <label className="block text-sm font-medium text-zinc-400 mb-1">Type</label>
-              <select
-                value={type}
-                onChange={(e: any) => setType(e.target.value)}
-                className="block w-full px-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-white focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
-              >
+              <label className="block text-sm text-zinc-400 mb-1">Type</label>
+              <select value={type} onChange={(e: any) => setType(e.target.value)}
+                className="block w-full px-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-white outline-none focus:ring-2 focus:ring-emerald-500">
                 <option value="investment">Investment (Cash In)</option>
                 <option value="drawing">Drawing (Cash Out)</option>
               </select>
             </div>
-
             <div>
-              <label className="block text-sm font-medium text-zinc-400 mb-1">Amount (INR)</label>
+              <label className="block text-sm text-zinc-400 mb-1">Amount (INR)</label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <span className="text-zinc-500 sm:text-sm">₹</span>
-                </div>
-                <input
-                  type="number"
-                  required
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  className="block w-full pl-8 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
-                  placeholder="0.00"
-                />
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 text-sm">₹</span>
+                <input type="number" required value={amount} onChange={e => setAmount(e.target.value)}
+                  className="block w-full pl-8 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-white outline-none focus:ring-2 focus:ring-emerald-500"
+                  placeholder="0.00" />
               </div>
             </div>
-
             <div>
-              <label className="block text-sm font-medium text-zinc-400 mb-1">Date</label>
-              <input
-                type="date"
-                required
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="block w-full px-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-white focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
-                style={{ colorScheme: 'dark' }}
-              />
+              <label className="block text-sm text-zinc-400 mb-1">Date</label>
+              <input type="date" required value={date} onChange={e => setDate(e.target.value)}
+                className="block w-full px-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-white outline-none focus:ring-2 focus:ring-emerald-500"
+                style={{ colorScheme: 'dark' }} />
             </div>
-
-            <button
-              type="submit"
-              className="w-full mt-6 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-lg font-medium transition-all shadow-lg shadow-emerald-900/20"
-            >
-              <Landmark className="h-5 w-5" /> Record Equity
+            <label className="flex items-center gap-3 cursor-pointer py-1">
+              <input type="checkbox" checked={autoCreateTx} onChange={e => setAutoCreateTx(e.target.checked)}
+                className="w-4 h-4 rounded border-zinc-700 bg-zinc-900 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-0" />
+              <div>
+                <p className="text-sm text-zinc-300">Create linked transaction</p>
+                <p className="text-[10px] text-zinc-600">Auto-add to Financials ledger</p>
+              </div>
+            </label>
+            <button type="submit" className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-lg font-medium transition-all">
+              <Landmark className="h-5 w-5" /> Record
             </button>
           </form>
         </div>
 
         {/* Ledger */}
-        <div className="col-span-1 lg:col-span-2 border border-zinc-800 bg-zinc-900/40 rounded-2xl p-6 overflow-hidden flex flex-col h-[500px]">
-          <h2 className="text-xl font-semibold text-white mb-6">Equity Log</h2>
-          
-          <div className="flex-1 overflow-y-auto pr-2 space-y-3">
-             {equities.length === 0 ? (
-               <div className="h-full flex flex-col items-center justify-center text-zinc-500">
-                 <Landmark className="h-12 w-12 mb-4 opacity-20" />
-                 <p>No equity records yet.</p>
-               </div>
-             ) : (
-               equities.slice().reverse().map((eq) => (
-                 <div key={eq.id} className="flex items-center justify-between p-4 bg-zinc-900/50 border border-zinc-800 rounded-xl">
-                   <div className="flex items-center gap-4">
-                     <div className={`p-2 rounded-lg ${eq.type === 'investment' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
-                       {eq.type === 'investment' ? <ArrowUpRight className="h-5 w-5" /> : <ArrowDownRight className="h-5 w-5" />}
-                     </div>
-                     <div className="flex flex-col">
-                       <span className="text-white font-medium">{eq.partnerId}</span>
-                       <span className="text-zinc-400 text-[10px] md:text-sm">{eq.type === 'investment' ? 'Investment' : 'Drawing'} • {format(new Date(eq.date), 'MMM dd')}</span>
-                     </div>
-                   </div>
-                   <div className={`font-semibold text-lg ${eq.type === 'investment' ? 'text-emerald-400' : 'text-zinc-100'}`}>
-                     {eq.type === 'investment' ? '+' : '-'}{formatINR(eq.amount)}
-                   </div>
-                 </div>
-               ))
-             )}
+        <div className="lg:col-span-2 border border-zinc-800 bg-zinc-900/40 rounded-2xl p-6 flex flex-col" style={{ height: '520px' }}>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-white">Equity Log</h2>
+            <div className="flex bg-zinc-900 border border-zinc-800 rounded-xl p-0.5">
+              {PARTNERS.map(p => (
+                <button key={p} onClick={() => setActiveTab(p)}
+                  className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${activeTab === p ? 'bg-zinc-700 text-white' : 'text-zinc-500 hover:text-zinc-300'}`}>{p}</button>
+              ))}
+            </div>
+          </div>
+          <div className="flex-1 overflow-y-auto pr-1 space-y-2">
+            {equities.filter(e => e.partnerId === activeTab).length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center text-zinc-500">
+                <Landmark className="h-10 w-10 mb-3 opacity-20" />
+                <p className="text-sm">No equity records for {activeTab}.</p>
+              </div>
+            ) : (
+              equities.filter(e => e.partnerId === activeTab).slice().reverse().map(eq => (
+                <div key={eq.id} className="flex items-center justify-between p-4 bg-zinc-900/50 border border-zinc-800 rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-lg ${eq.type === 'investment' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
+                      {eq.type === 'investment' ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}
+                    </div>
+                    <div>
+                      <p className="text-white text-sm font-medium">
+                        {(eq as any).note || (eq.type === 'investment' ? 'Equity Investment' : 'Drawing')}
+                      </p>
+                      <p className="text-zinc-500 text-xs">{format(new Date(eq.date), 'dd MMM yyyy')} • {eq.type}</p>
+                    </div>
+                  </div>
+                  <span className={`font-bold text-sm ${eq.type === 'investment' ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {eq.type === 'investment' ? '+' : '-'}{fmt(eq.amount)}
+                  </span>
+                </div>
+              ))
+            )}
           </div>
         </div>
-
       </div>
+
+      {/* Settle Modal */}
+      {showSettle && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="bg-zinc-900 border border-zinc-700 rounded-2xl p-6 w-full max-w-md shadow-2xl animate-in fade-in zoom-in duration-200">
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-3">
+                <div className="bg-amber-500/10 p-2 rounded-lg"><Scale className="w-5 h-5 text-amber-400" /></div>
+                <h3 className="text-lg font-bold text-white">Settle Balance</h3>
+              </div>
+              <button onClick={() => setShowSettle(false)} className="text-zinc-500 hover:text-white transition-colors"><X className="w-5 h-5" /></button>
+            </div>
+
+            <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-4 mb-5 space-y-2 text-sm">
+              <div className="flex justify-between text-zinc-400">
+                <span>Pratik net position</span><span className={statsPratik.netPosition >= 0 ? 'text-emerald-400' : 'text-red-400'}>{fmt(statsPratik.netPosition)}</span>
+              </div>
+              <div className="flex justify-between text-zinc-400">
+                <span>Pranav net position</span><span className={statsPranav.netPosition >= 0 ? 'text-emerald-400' : 'text-red-400'}>{fmt(statsPranav.netPosition)}</span>
+              </div>
+              <div className="border-t border-zinc-800 pt-2 mt-2 flex justify-between font-bold">
+                <span className="text-amber-300">Settlement needed</span>
+                <span className="text-amber-400">{fmt(settlementAmount)}</span>
+              </div>
+              <p className="text-[11px] text-zinc-500 pt-1">
+                <span className="text-white font-semibold">{debtor}</span> should pay <span className="text-amber-400 font-bold">{fmt(settlementAmount)}</span> to <span className="text-white font-semibold">{creditor}</span> to equalise positions.
+              </p>
+            </div>
+
+            <div className="space-y-3 mb-5">
+              <div>
+                <label className="block text-xs text-zinc-500 mb-1">Settlement Date</label>
+                <input type="date" value={settleDate} onChange={e => setSettleDate(e.target.value)}
+                  className="w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-white outline-none focus:border-amber-500 text-sm"
+                  style={{ colorScheme: 'dark' }} />
+              </div>
+              <div>
+                <label className="block text-xs text-zinc-500 mb-1">Note (optional)</label>
+                <input type="text" value={settleNote} onChange={e => setSettleNote(e.target.value)}
+                  placeholder="e.g. Monthly settlement — May 2026"
+                  className="w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-white outline-none focus:border-amber-500 text-sm" />
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button onClick={() => setShowSettle(false)}
+                className="flex-1 py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl font-bold text-sm transition-all">Cancel</button>
+              <button onClick={handleSettle} disabled={settleLoading}
+                className="flex-1 py-3 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-black rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2">
+                <CheckCircle2 className="w-4 h-4" /> {settleLoading ? 'Recording...' : 'Confirm Settle'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

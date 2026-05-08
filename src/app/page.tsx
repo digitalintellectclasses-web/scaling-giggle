@@ -26,9 +26,10 @@ export default function Dashboard() {
     show: { opacity: 1, transition: { staggerChildren: 0.1 } }
   };
   const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 300, damping: 24 } }
+    hidden: { opacity: 0, y: 28 },
+    show: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 260, damping: 22 } }
   };
+  const viewportOpts = { once: true, amount: 0.12 };
 
   const [showResetModal, setShowResetModal] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
@@ -225,10 +226,10 @@ export default function Dashboard() {
   }
 
   return (
-    <motion.div 
-      variants={containerVariants}
+    <motion.div
       initial="hidden"
       animate="show"
+      variants={containerVariants}
       className="space-y-6 pb-20"
     >
       {/* Reset Confirmation Modal */}
@@ -314,7 +315,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 relative z-10">
         
         {/* Revenue Card */}
-        <motion.div variants={itemVariants} className="relative group rounded-[28px] p-[1px] overflow-hidden bg-gradient-to-b from-emerald-500/40 via-zinc-900/80 to-zinc-950 hover:from-emerald-400/60 hover:to-emerald-900/30 transition-all duration-500 shadow-2xl shadow-black">
+        <motion.div variants={itemVariants} whileInView="show" initial="hidden" viewport={{ once: true, amount: 0.1 }} className="relative group rounded-[28px] p-[1px] overflow-hidden bg-gradient-to-b from-emerald-500/40 via-zinc-900/80 to-zinc-950 hover:from-emerald-400/60 hover:to-emerald-900/30 transition-all duration-500 shadow-2xl shadow-black">
           <div className="absolute inset-0 bg-emerald-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-700 blur-2xl"></div>
           <div className="h-full w-full bg-zinc-950/80 backdrop-blur-2xl rounded-[27px] p-6 flex flex-col justify-between relative z-10 border border-white/5 group-hover:border-white/10 transition-colors">
             <div className="flex justify-between items-start mb-8">
@@ -330,7 +331,7 @@ export default function Dashboard() {
         </motion.div>
 
         {/* Expenses Card */}
-        <motion.div variants={itemVariants} className="relative group rounded-[28px] p-[1px] overflow-hidden bg-gradient-to-b from-red-500/40 via-zinc-900/80 to-zinc-950 hover:from-red-400/60 hover:to-red-900/30 transition-all duration-500 shadow-2xl shadow-black">
+        <motion.div variants={itemVariants} whileInView="show" initial="hidden" viewport={{ once: true, amount: 0.1 }} className="relative group rounded-[28px] p-[1px] overflow-hidden bg-gradient-to-b from-red-500/40 via-zinc-900/80 to-zinc-950 hover:from-red-400/60 hover:to-red-900/30 transition-all duration-500 shadow-2xl shadow-black">
           <div className="absolute inset-0 bg-red-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-700 blur-2xl"></div>
           <div className="h-full w-full bg-zinc-950/80 backdrop-blur-2xl rounded-[27px] p-6 flex flex-col justify-between relative z-10 border border-white/5 group-hover:border-white/10 transition-colors">
             <div className="flex justify-between items-start mb-8">
@@ -346,7 +347,7 @@ export default function Dashboard() {
         </motion.div>
 
         {/* Net Profit Card */}
-        <motion.div variants={itemVariants} className="relative group rounded-[28px] p-[1px] overflow-hidden bg-gradient-to-b from-blue-500/40 via-zinc-900/80 to-zinc-950 hover:from-blue-400/60 hover:to-blue-900/30 transition-all duration-500 shadow-2xl shadow-black">
+        <motion.div variants={itemVariants} whileInView="show" initial="hidden" viewport={{ once: true, amount: 0.1 }} className="relative group rounded-[28px] p-[1px] overflow-hidden bg-gradient-to-b from-blue-500/40 via-zinc-900/80 to-zinc-950 hover:from-blue-400/60 hover:to-blue-900/30 transition-all duration-500 shadow-2xl shadow-black">
           <div className="absolute inset-0 bg-blue-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-700 blur-2xl"></div>
           <div className="h-full w-full bg-zinc-950/80 backdrop-blur-2xl rounded-[27px] p-6 flex flex-col justify-between relative z-10 border border-white/5 group-hover:border-white/10 transition-colors">
             <div className="flex justify-between items-start mb-8">
@@ -362,7 +363,7 @@ export default function Dashboard() {
         </motion.div>
 
         {/* Partner Split Card */}
-        <motion.div variants={itemVariants} className="relative group rounded-[28px] p-[1px] overflow-hidden bg-gradient-to-b from-purple-500/40 via-zinc-900/80 to-zinc-950 hover:from-purple-400/60 hover:to-purple-900/30 transition-all duration-500 shadow-2xl shadow-black">
+        <motion.div variants={itemVariants} whileInView="show" initial="hidden" viewport={{ once: true, amount: 0.1 }} className="relative group rounded-[28px] p-[1px] overflow-hidden bg-gradient-to-b from-purple-500/40 via-zinc-900/80 to-zinc-950 hover:from-purple-400/60 hover:to-purple-900/30 transition-all duration-500 shadow-2xl shadow-black">
           <div className="absolute inset-0 bg-purple-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-700 blur-2xl"></div>
           <div className="h-full w-full bg-zinc-950/80 backdrop-blur-2xl rounded-[27px] p-6 flex flex-col justify-between relative z-10 border border-white/5 group-hover:border-white/10 transition-colors">
             <div className="flex justify-between items-start mb-8">
@@ -384,7 +385,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Daily Insights Report */}
-        <motion.div variants={itemVariants} className="col-span-1 lg:col-span-2 relative group rounded-[28px] p-[1px] overflow-hidden bg-gradient-to-b from-blue-500/30 via-zinc-900/80 to-zinc-950 shadow-2xl shadow-black flex flex-col">
+        <motion.div variants={itemVariants} whileInView="show" initial="hidden" viewport={{ once: true, amount: 0.1 }} className="col-span-1 lg:col-span-2 relative group rounded-[28px] p-[1px] overflow-hidden bg-gradient-to-b from-blue-500/30 via-zinc-900/80 to-zinc-950 shadow-2xl shadow-black flex flex-col">
           <div className="h-full w-full bg-zinc-950/80 backdrop-blur-2xl rounded-[27px] p-6 flex flex-col relative z-10 border border-white/5 group-hover:border-white/10 transition-colors">
           {/* Futuristic grid background with moving gradient */}
           <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none" />
@@ -452,7 +453,7 @@ export default function Dashboard() {
         </motion.div>
 
         {/* Finance State Activity Feed */}
-        <motion.div variants={itemVariants} className="col-span-1 relative group rounded-[28px] p-[1px] overflow-hidden bg-gradient-to-b from-zinc-700/30 via-zinc-900/80 to-zinc-950 shadow-2xl shadow-black">
+        <motion.div variants={itemVariants} whileInView="show" initial="hidden" viewport={{ once: true, amount: 0.1 }} className="col-span-1 relative group rounded-[28px] p-[1px] overflow-hidden bg-gradient-to-b from-zinc-700/30 via-zinc-900/80 to-zinc-950 shadow-2xl shadow-black">
           <div className="h-[400px] w-full bg-zinc-950/80 backdrop-blur-2xl rounded-[27px] p-6 flex flex-col relative z-10 border border-white/5 group-hover:border-white/10 transition-colors">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-2">
@@ -497,7 +498,7 @@ export default function Dashboard() {
         </motion.div>
 
         {/* Employee Productivity Analysis */}
-        <motion.div variants={itemVariants} className="col-span-1 lg:col-span-3 relative group rounded-[28px] p-[1px] overflow-hidden bg-gradient-to-b from-emerald-500/20 via-zinc-900/80 to-zinc-950 shadow-2xl shadow-black">
+        <motion.div variants={itemVariants} whileInView="show" initial="hidden" viewport={{ once: true, amount: 0.1 }} className="col-span-1 lg:col-span-3 relative group rounded-[28px] p-[1px] overflow-hidden bg-gradient-to-b from-emerald-500/20 via-zinc-900/80 to-zinc-950 shadow-2xl shadow-black">
           <div className="h-full w-full bg-zinc-950/80 backdrop-blur-2xl rounded-[27px] p-6 flex flex-col relative z-10 border border-white/5 group-hover:border-white/10 transition-colors">
           <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/3 pointer-events-none" />
           <div className="flex items-center justify-between mb-6">
@@ -554,7 +555,7 @@ export default function Dashboard() {
         </motion.div>
 
         {/* Expense Distribution */}
-        <motion.div variants={itemVariants} className="col-span-1 lg:col-span-3 relative group rounded-[28px] p-[1px] overflow-hidden bg-gradient-to-b from-purple-500/20 via-zinc-900/80 to-zinc-950 shadow-2xl shadow-black">
+        <motion.div variants={itemVariants} whileInView="show" initial="hidden" viewport={{ once: true, amount: 0.1 }} className="col-span-1 lg:col-span-3 relative group rounded-[28px] p-[1px] overflow-hidden bg-gradient-to-b from-purple-500/20 via-zinc-900/80 to-zinc-950 shadow-2xl shadow-black">
           <div className="h-full w-full bg-zinc-950/80 backdrop-blur-2xl rounded-[27px] p-6 flex flex-col relative z-10 border border-white/5 group-hover:border-white/10 transition-colors">
           <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-500/5 rounded-full blur-[80px] translate-y-1/2 -translate-x-1/3 pointer-events-none" />
           <div className="flex items-center gap-2 mb-6 relative z-10">

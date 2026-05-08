@@ -29,7 +29,6 @@ const auth = getAuth(app);
 // Use memoryLocalCache to force server-first data flow and fix 
 // the 'hanging' sync issues common in serverless/proxied environments.
 const db = initializeFirestore(app, {
-  experimentalForceLongPolling: true,
   localCache: memoryLocalCache()
 });
 

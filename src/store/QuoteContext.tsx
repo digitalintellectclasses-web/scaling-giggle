@@ -42,9 +42,18 @@ export interface Quotation {
   dueDate?: string;
 }
 
+export interface PdfConfig {
+  agencyName: string;
+  address: string;
+  contact: string;
+  footerText: string;
+  website: string;
+}
+
 interface QuoteContextType {
   services: Service[];
   quotations: Quotation[];
+  pdfConfig: PdfConfig;
   addService: (service: Omit<Service, 'id'>) => Promise<void>;
   updateService: (id: string, updates: Partial<Service>) => Promise<void>;
   deleteService: (id: string) => Promise<void>;
@@ -52,15 +61,25 @@ interface QuoteContextType {
   updateQuotationStatus: (id: string, status: Quotation['status']) => Promise<void>;
   updateQuotationPayment: (id: string, updates: { paymentStatus: 'unpaid' | 'partial' | 'paid', amountPaid: number }) => Promise<void>;
   deleteQuotation: (id: string) => Promise<void>;
+  updatePdfConfig: (updates: Partial<PdfConfig>) => Promise<void>;
 }
 
 const QuoteContext = createContext<QuoteContextType | undefined>(undefined);
+
+const DEFAULT_PDF_CONFIG: PdfConfig = {
+  agencyName: 'PRIME CREATIVE',
+  address: '123 Innovation Way, Suite 500\nTech District, Mumbai 400001',
+  contact: '+91 98765 43210 | hello@primecreative.com',
+  footerText: 'Thank you for choosing Prime Creative Agency.',
+  website: 'www.primecreative.com'
+};
 
 export function QuoteProvider({ children }: { children: React.ReactNode }) {
   const { currentUser, users } = useAuth();
   const { addNotification } = useNotifications();
   const [services, setServices] = useState<Service[]>([]);
   const [quotations, setQuotations] = useState<Quotation[]>([]);
+  const [pdfConfig, setPdfConfig] = useState<PdfConfig>(DEFAULT_PDF_CONFIG);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -75,9 +94,16 @@ export function QuoteProvider({ children }: { children: React.ReactNode }) {
       setQuotations(q.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
     });
 
+    const unsubConfig = onSnapshot(doc(db, 'config', 'pdf'), (snap) => {
+      if (snap.exists()) {
+        setPdfConfig({ ...DEFAULT_PDF_CONFIG, ...snap.data() });
+      }
+    });
+
     return () => {
       unsubServices();
       unsubQuotations();
+      unsubConfig();
     };
   }, [currentUser]);
 
@@ -123,11 +149,16 @@ export function QuoteProvider({ children }: { children: React.ReactNode }) {
     await deleteDoc(doc(db, 'quotations', id));
   };
 
+  const updatePdfConfig = async (updates: Partial<PdfConfig>) => {
+    await setDoc(doc(db, 'config', 'pdf'), updates, { merge: true });
+  };
+
   return (
     <QuoteContext.Provider value={{
-      services, quotations,
+      services, quotations, pdfConfig,
       addService, updateService, deleteService,
-      addQuotation, updateQuotationStatus, updateQuotationPayment, deleteQuotation
+      addQuotation, updateQuotationStatus, updateQuotationPayment, deleteQuotation,
+      updatePdfConfig
     }}>
       {children}
     </QuoteContext.Provider>

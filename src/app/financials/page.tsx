@@ -2,21 +2,20 @@
 
 import { useState, useEffect } from 'react';
 import { useFinance } from '@/store/FinanceContext';
-import { Plus, Trash2, IndianRupee, Wallet } from 'lucide-react';
-import { format } from 'date-fns';
+import { Plus, Trash2, IndianRupee, Wallet, Users, AlertCircle, X } from 'lucide-react';
+import { format, differenceInDays } from 'date-fns';
 
 const formatINR = (amount: number) => {
   return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount);
 };
 
 export default function FinancialTracking() {
-  const { transactions, clients, addTransaction, deleteTransaction, isAdmin, isLoaded } = useFinance();
+  const { transactions, clients, addTransaction, addClient, deleteTransaction, isAdmin, isLoaded } = useFinance();
   
   const [type, setType] = useState<'income' | 'expense'>('income');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('Service Retainer');
   const [description, setDescription] = useState('');
-  // Always set from client-side local clock after hydration to avoid UTC server date
   const [date, setDate] = useState('');
 
   useEffect(() => {
@@ -31,6 +30,13 @@ export default function FinancialTracking() {
   const [managedBy, setManagedBy] = useState<'Pratik' | 'Pranav'>('Pratik');
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'online'>('online');
   const [clientId, setClientId] = useState<string>('');
+
+  // Inline new client form
+  const [showNewClient, setShowNewClient] = useState(false);
+  const [newClientName, setNewClientName] = useState('');
+  const [newClientPkg, setNewClientPkg] = useState('');
+  const [newClientActivation, setNewClientActivation] = useState(new Date().toISOString().split('T')[0]);
+  const [newClientExpiry, setNewClientExpiry] = useState('');
 
   const INCOME_CATEGORIES = ['Service Retainer', 'Project Fee', 'Consulting', 'Other'];
   const EXPENSE_CATEGORIES = ['Software & Tools', 'Ad Spend', 'Rent & Utilities', 'Freelance/Contractors', 'Payroll', 'Other'];
@@ -140,14 +146,80 @@ export default function FinancialTracking() {
                 <label className="block text-sm font-medium text-zinc-400 mb-1">Link to Client (Optional)</label>
                 <select
                   value={clientId}
-                  onChange={(e) => setClientId(e.target.value)}
+                  onChange={(e) => {
+                    if (e.target.value === '__add_new__') {
+                      setShowNewClient(true);
+                    } else {
+                      setClientId(e.target.value);
+                    }
+                  }}
                   className="block w-full px-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-white focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
                 >
                   <option value="">-- No Client Linked --</option>
                   {clients.map(c => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
+                  <option value="__add_new__" className="text-emerald-400">+ Add New Client</option>
                 </select>
+
+                {showNewClient && (
+                  <div className="mt-3 p-3 bg-zinc-800/50 border border-zinc-700 rounded-xl space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-emerald-400">New Client</span>
+                      <button onClick={() => setShowNewClient(false)} className="p-1 text-zinc-500 hover:text-zinc-300"><X className="w-3.5 h-3.5" /></button>
+                    </div>
+                    <input
+                      type="text"
+                      value={newClientName}
+                      onChange={(e) => setNewClientName(e.target.value)}
+                      className="block w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-white text-sm outline-none focus:ring-2 focus:ring-emerald-500"
+                      placeholder="Client name"
+                    />
+                    <input
+                      type="number"
+                      value={newClientPkg}
+                      onChange={(e) => setNewClientPkg(e.target.value)}
+                      className="block w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-white text-sm outline-none focus:ring-2 focus:ring-emerald-500"
+                      placeholder="Package tier (INR)"
+                    />
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        type="date"
+                        value={newClientActivation}
+                        onChange={(e) => setNewClientActivation(e.target.value)}
+                        className="block w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-white text-sm outline-none focus:ring-2 focus:ring-emerald-500"
+                        style={{ colorScheme: 'dark' }}
+                      />
+                      <input
+                        type="date"
+                        value={newClientExpiry}
+                        onChange={(e) => setNewClientExpiry(e.target.value)}
+                        className="block w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-white text-sm outline-none focus:ring-2 focus:ring-emerald-500"
+                        style={{ colorScheme: 'dark' }}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!newClientName || !newClientPkg || !newClientExpiry) return;
+                        await addClient({
+                          name: newClientName,
+                          packageTier: Number(newClientPkg),
+                          externalCosts: 0,
+                          activationDate: newClientActivation,
+                          expiryDate: newClientExpiry,
+                        });
+                        setNewClientName('');
+                        setNewClientPkg('');
+                        setNewClientExpiry('');
+                        setShowNewClient(false);
+                      }}
+                      className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm rounded-lg font-medium transition-all"
+                    >
+                      Save Client
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
@@ -211,9 +283,9 @@ export default function FinancialTracking() {
         </div>
 
         {/* Ledger */}
-        <div className="col-span-1 xl:col-span-3 space-y-8 overflow-hidden flex flex-col h-[800px]">
-          
-          <div className="border border-zinc-800 bg-zinc-900/40 rounded-2xl p-6 flex-1 overflow-hidden flex flex-col">
+        <div className="col-span-1 xl:col-span-3 space-y-8 overflow-hidden flex flex-col">  
+
+          <div className="border border-zinc-800 bg-zinc-900/40 rounded-2xl p-6 flex-1 overflow-hidden flex flex-col" style={{ height: '500px' }}>
             <h2 className="text-xl font-semibold text-white mb-6">Recent Transactions</h2>
             
             <div className="flex-1 overflow-y-auto pr-2 space-y-3">
@@ -251,6 +323,51 @@ export default function FinancialTracking() {
                ))
              )}
           </div>
+
+          {/* Client Overview (read-only) */}
+          {clients.length > 0 && (
+            <div className="border border-zinc-800 bg-zinc-900/40 rounded-2xl p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <Users className="w-4 h-4 text-zinc-400" />
+                <h2 className="text-lg font-semibold text-white">Client Overview</h2>
+                <span className="text-xs text-zinc-500 ml-auto">Read-only</span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs whitespace-nowrap">
+                  <thead className="text-zinc-500 uppercase tracking-wider">
+                    <tr>
+                      <th className="pb-3 pr-4 font-medium">Client</th>
+                      <th className="pb-3 px-4 font-medium">Package</th>
+                      <th className="pb-3 px-4 font-medium text-emerald-400">Margin</th>
+                      <th className="pb-3 pl-4 font-medium text-right">Expiry</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-800/50">
+                    {clients.slice().sort((a, b) => new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime()).map(c => {
+                      const diff = differenceInDays(new Date(c.expiryDate), new Date());
+                      const isExpiring = diff <= 5;
+                      const margin = c.packageTier - c.externalCosts;
+                      return (
+                        <tr key={c.id} className="hover:bg-zinc-800/20 transition-colors">
+                          <td className="py-2.5 pr-4">
+                            <span className="text-zinc-300 font-medium">{c.name}</span>
+                          </td>
+                          <td className="py-2.5 px-4 text-zinc-400">₹{c.packageTier.toLocaleString()}</td>
+                          <td className="py-2.5 px-4 text-emerald-400 font-medium">₹{margin.toLocaleString()}</td>
+                          <td className="py-2.5 pl-4 text-right">
+                            <span className={`${isExpiring ? 'text-red-400' : 'text-zinc-500'}`}>
+                              {diff < 0 ? `Expired ${Math.abs(diff)}d ago` : diff === 0 ? 'Today' : `${diff}d left`}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
         </div>
 
       </div>

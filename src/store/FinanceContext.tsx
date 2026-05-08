@@ -73,7 +73,7 @@ type FinanceContextType = {
   isAdmin: boolean;
   addTransaction: (tx: Omit<Transaction, 'id'>) => Promise<void>;
   addClient: (client: Omit<Client, 'id'>) => Promise<void>;
-  addEquity: (equity: Omit<PartnerEquity, 'id'>) => Promise<void>;
+  addEquity: (equity: Omit<PartnerEquity, 'id'>, autoCreateTx?: boolean) => Promise<void>;
   addSalaryPayment: (sp: Omit<SalaryPayment, 'id'>) => Promise<void>;
   deleteSalaryPayment: (id: string) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
@@ -285,7 +285,11 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     if (!auth.currentUser) return;
     const id = crypto.randomUUID();
     try {
-      await setDoc(doc(db, 'transactions', id), { ...tx, id });
+      // Strip undefined values — Firestore rejects them with invalid-argument
+      const txData = Object.fromEntries(
+        Object.entries({ ...tx, id }).filter(([, v]) => v !== undefined)
+      );
+      await setDoc(doc(db, 'transactions', id), txData);
 
       // Notify ALL other admins immediately — no approval needed
       const otherAdmins = users.filter(u => u.role === 'admin' && u.id !== currentUser?.id);
@@ -315,9 +319,28 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const addEquity = async (equity: Omit<PartnerEquity, 'id'>) => {
+  const addEquity = async (equity: Omit<PartnerEquity, 'id'>, autoCreateTx: boolean = true) => {
     const id = crypto.randomUUID();
     await setDoc(doc(db, 'equities', id), { ...equity, id });
+
+    // Auto-create a linked financial transaction so equity appears in financials
+    if (autoCreateTx) {
+      const txId = crypto.randomUUID();
+      const txType = equity.type === 'investment' ? 'income' : 'expense';
+      const txCategory = equity.type === 'investment' ? 'Partner Investment' : 'Partner Drawing';
+      const txDate = equity.date || new Date().toISOString().split('T')[0];
+      await setDoc(doc(db, 'transactions', txId), {
+        id: txId,
+        type: txType,
+        amount: equity.amount,
+        category: txCategory,
+        description: `${equity.type === 'investment' ? 'Equity investment' : 'Drawing'} by ${equity.partnerId}`,
+        date: txDate,
+        managedBy: equity.partnerId,
+        paymentMethod: 'online',
+      });
+    }
+
     const otherAdmins = users.filter(u => u.role === 'admin' && u.id !== currentUser?.id);
     for (const admin of otherAdmins) {
       await addNotification({
