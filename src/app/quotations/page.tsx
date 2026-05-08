@@ -439,13 +439,13 @@ export default function QuotationsPage() {
 
                 {/* Right: Agency Info */}
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px', marginBottom: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '12px', marginBottom: '10px' }}>
                     <div>
-                      <p style={{ fontSize: '16px', fontWeight: 900, color: '#ffffff', margin: 0, letterSpacing: '0.05em', textTransform: 'uppercase' }}>{pdfConfig.agencyName}</p>
+                      <p style={{ fontSize: '15px', fontWeight: 900, color: '#ffffff', margin: 0, letterSpacing: '0.05em', textTransform: 'uppercase' }}>{pdfConfig.agencyName}</p>
+                      <p style={{ fontSize: '10px', fontWeight: 700, color: '#00b4d8', margin: 0, letterSpacing: '0.15em', textTransform: 'uppercase' }}>Tech Solutions</p>
                     </div>
-                    <div style={{ width: '38px', height: '38px', background: 'linear-gradient(135deg, #00b4d8, #0077b6)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '18px', color: '#fff', flexShrink: 0 }}>
-                      {pdfConfig.agencyName.charAt(0)}
-                    </div>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="/logo.png" alt="Ivory Tech Solutions" style={{ height: '56px', width: 'auto', objectFit: 'contain', flexShrink: 0 }} />
                   </div>
                   <div style={{ fontSize: '12px', color: '#90e0ef', lineHeight: '1.8', whiteSpace: 'pre-wrap', textAlign: 'right' }}>
                     <p style={{ margin: 0 }}>{pdfConfig.website}</p>

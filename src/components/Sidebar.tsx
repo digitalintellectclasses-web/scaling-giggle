@@ -46,12 +46,10 @@ export function Sidebar() {
     <div className="flex h-screen w-64 flex-shrink-0 flex-col bg-[#0f0f11] border-r border-[#27272a] shadow-2xl relative z-50">
       {/* Brand */}
       <div className="flex h-16 shrink-0 items-center px-4 border-b border-zinc-800/50">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'linear-gradient(135deg, #00b4d8, #0077b6)' }}>
-            <span className="text-white font-extrabold text-[10px] tracking-tight">ITS</span>
-          </div>
+        <div className="flex items-center gap-2">
+          <img src="/logo.png" alt="Ivory Tech Solutions" className="h-9 w-auto object-contain" />
           <div className="leading-none">
-            <p className="text-[13px] font-black text-white tracking-tight" style={{ color: '#00b4d8' }}>IVORY TECH</p>
+            <p className="text-[11px] font-black tracking-tight" style={{ color: '#00b4d8' }}>IVORY TECH</p>
             <p className="text-[9px] font-semibold text-zinc-500 tracking-widest uppercase">Finance Mgmt</p>
           </div>
         </div>

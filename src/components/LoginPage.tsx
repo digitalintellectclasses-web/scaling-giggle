@@ -38,14 +38,13 @@ export function LoginPage() {
       <div className="relative w-full max-w-md">
         {/* Logo / Brand */}
         <div className="text-center mb-10">
-          {/* Elephant logo ring */}
-          <div className="inline-flex items-center justify-center mb-5 relative">
-            <div className="w-20 h-20 rounded-2xl flex items-center justify-center shadow-2xl" style={{ background: 'linear-gradient(135deg, #00b4d8 0%, #0077b6 60%, #03045e 100%)' }}>
-              <span className="text-white font-black text-2xl tracking-tighter">ITS</span>
+          <div className="inline-flex flex-col items-center justify-center mb-2">
+            <div className="relative">
+              <div className="absolute -inset-3 rounded-full opacity-20 blur-xl" style={{ background: 'radial-gradient(circle, #00b4d8, #0077b6)' }} />
+              <img src="/logo.png" alt="Ivory Tech Solutions" className="relative h-24 w-auto object-contain" />
             </div>
-            <div className="absolute -inset-1 rounded-2xl opacity-30 blur-md" style={{ background: 'linear-gradient(135deg, #00b4d8, #0077b6)' }} />
           </div>
-          <h1 className="text-2xl font-black text-white tracking-tight">Ivory Tech Solutions</h1>
+          <h1 className="text-2xl font-black text-white tracking-tight mt-1">Ivory Tech Solutions</h1>
           <p className="text-[11px] font-semibold tracking-[0.2em] uppercase mt-0.5" style={{ color: '#00b4d8' }}>Finance Management Tool</p>
           <p className="text-zinc-500 mt-3 text-sm">Sign in to access your portal</p>
         </div>
