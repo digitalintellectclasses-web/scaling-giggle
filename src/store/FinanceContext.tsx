@@ -40,6 +40,7 @@ export type Client = {
   id: string;
   name: string;
   email?: string;
+  phone?: string;
   packageTier: number;
   activationDate: string;
   expiryDate: string;

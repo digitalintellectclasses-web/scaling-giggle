@@ -20,6 +20,7 @@ export default function QuotationsPage() {
   
   const [selectedClient, setSelectedClient] = useState('');
   const [customClientName, setCustomClientName] = useState('');
+  const [customClientPhone, setCustomClientPhone] = useState('');
   const [items, setItems] = useState<QuoteItem[]>([]);
   const [selectedService, setSelectedService] = useState('');
   const [quantity, setQuantity] = useState(1);
@@ -41,7 +42,7 @@ export default function QuotationsPage() {
   if (!financeLoaded) return <div className="h-full w-full flex items-center justify-center"><div className="animate-spin h-8 w-8 border-2 border-emerald-500 rounded-full border-t-transparent"></div></div>;
 
   const client = selectedClient === 'custom' 
-    ? { id: 'custom', name: customClientName || 'Unnamed Client', email: '' }
+    ? { id: 'custom', name: customClientName || 'Unnamed Client', email: '', phone: customClientPhone }
     : clients.find(c => c.id === selectedClient);
   
   const subtotal = items.reduce((acc, item) => acc + item.amount, 0);
@@ -101,12 +102,12 @@ export default function QuotationsPage() {
       const html2pdf = (await import('html2pdf.js')).default;
       
       const opt = {
-        margin:       0.5,
+        margin:       0,
         filename:     filename,
         image:        { type: 'jpeg' as 'jpeg', quality: 0.98 },
         html2canvas:  { scale: 2, useCORS: true, logging: false, windowWidth: 1200 },
         jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' as 'portrait' },
-        pagebreak:    { mode: ['css', 'legacy'], avoid: ['.pdf-row', '.pdf-footer', '.pdf-totals'] }
+        pagebreak:    { mode: ['css', 'legacy'], avoid: ['.pdf-desc-line', '.pdf-footer', '.pdf-totals'] }
       };
       
       // Explicitly wait for save
@@ -150,6 +151,7 @@ export default function QuotationsPage() {
       // Reset form after saving
       setSelectedClient('');
       setCustomClientName('');
+      setCustomClientPhone('');
       setItems([]);
       setNotes('');
       setActiveTab('history');
@@ -239,7 +241,10 @@ export default function QuotationsPage() {
                     <label className="block text-xs font-medium text-zinc-400 mb-1">Select Client</label>
                     <select value={selectedClient} onChange={e => {
                       setSelectedClient(e.target.value);
-                      if (e.target.value !== 'custom') setCustomClientName('');
+                      if (e.target.value !== 'custom') {
+                        setCustomClientName('');
+                        setCustomClientPhone('');
+                      }
                     }}
                       className="block w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-white outline-none focus:border-emerald-500 text-sm">
                       <option value="">-- Choose a client --</option>
@@ -249,15 +254,27 @@ export default function QuotationsPage() {
                   </div>
                   
                   {selectedClient === 'custom' && (
-                    <div className="animate-in fade-in slide-in-from-top-1 duration-200">
-                      <label className="block text-xs font-medium text-emerald-500/80 mb-1">Enter Custom Client Name</label>
-                      <input 
-                        type="text" 
-                        value={customClientName} 
-                        onChange={e => setCustomClientName(e.target.value)}
-                        placeholder="e.g. John Doe / Acme Corp"
-                        className="block w-full px-3 py-2.5 bg-zinc-950 border border-emerald-500/30 rounded-xl text-white outline-none focus:border-emerald-500 text-sm shadow-[0_0_15px_rgba(16,185,129,0.05)]"
-                      />
+                    <div className="animate-in fade-in slide-in-from-top-1 duration-200 grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-medium text-emerald-500/80 mb-1">Custom Client Name</label>
+                        <input 
+                          type="text" 
+                          value={customClientName} 
+                          onChange={e => setCustomClientName(e.target.value)}
+                          placeholder="e.g. Acme Corp"
+                          className="block w-full px-3 py-2.5 bg-zinc-950 border border-emerald-500/30 rounded-xl text-white outline-none focus:border-emerald-500 text-sm shadow-[0_0_15px_rgba(16,185,129,0.05)]"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-emerald-500/80 mb-1">Phone Number (Optional)</label>
+                        <input 
+                          type="text" 
+                          value={customClientPhone} 
+                          onChange={e => setCustomClientPhone(e.target.value)}
+                          placeholder="e.g. +91 98765 43210"
+                          className="block w-full px-3 py-2.5 bg-zinc-950 border border-emerald-500/30 rounded-xl text-white outline-none focus:border-emerald-500 text-sm shadow-[0_0_15px_rgba(16,185,129,0.05)]"
+                        />
+                      </div>
                     </div>
                   )}
                 </div>
@@ -466,7 +483,8 @@ export default function QuotationsPage() {
                   <div style={{ marginTop: '18px', textAlign: 'right' }}>
                     <p style={{ fontSize: '11px', fontWeight: 800, color: '#00b4d8', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 4px 0' }}>Bill To</p>
                     <p style={{ fontWeight: 800, fontSize: '16px', color: '#ffffff', margin: 0 }}>{client ? client.name : 'Client Name'}</p>
-                    <p style={{ fontSize: '12px', color: '#90e0ef', margin: 0 }}>{currentUser?.displayName || 'Account Executive'}</p>
+                    {client?.phone && <p style={{ fontSize: '13px', color: '#ffffff', margin: '2px 0 0 0' }}>{client.phone}</p>}
+                    <p style={{ fontSize: '12px', color: '#90e0ef', margin: '2px 0 0 0' }}>{currentUser?.displayName || 'Account Executive'}</p>
                   </div>
                 </div>
               </div>
@@ -491,20 +509,24 @@ export default function QuotationsPage() {
                   </div>
                 ) : (
                   items.map((item, idx) => (
-                    <div key={idx} className="pdf-row" style={{
+                    <div key={idx} style={{
                       display: 'flex',
                       gap: '8px',
                       padding: '16px 20px',
                       alignItems: 'flex-start',
                       borderBottom: idx < items.length - 1 ? '1px solid rgba(0,180,216,0.08)' : 'none',
                       background: idx % 2 === 0 ? 'transparent' : 'rgba(0,180,216,0.03)',
-                      pageBreakInside: 'avoid',
-                      breakInside: 'avoid',
                     }}>
                       <div style={{ flex: '1 1 55%' }}>
                         <p style={{ fontWeight: 700, color: '#ffffff', fontSize: '14px', margin: 0, marginBottom: item.description ? '5px' : 0 }}>{item.serviceName}</p>
                         {item.description && (
-                          <p style={{ fontSize: '12px', color: '#90e0ef', margin: 0, whiteSpace: 'pre-wrap', lineHeight: '1.7' }}>{item.description}</p>
+                          <div style={{ fontSize: '12px', color: '#90e0ef', margin: 0, lineHeight: '1.7' }}>
+                            {item.description.split('\n').map((line, i) => (
+                              <p key={i} className="pdf-desc-line" style={{ margin: 0, minHeight: line.trim() ? 'auto' : '12px', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                                {line}
+                              </p>
+                            ))}
+                          </div>
                         )}
                       </div>
                       <div style={{ flex: '0 0 60px', textAlign: 'center', color: '#e0f7fa', fontSize: '14px', fontWeight: 600 }}>{item.quantity}</div>
