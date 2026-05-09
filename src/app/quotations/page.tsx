@@ -101,7 +101,7 @@ export default function QuotationsPage() {
       const html2pdf = (await import('html2pdf.js')).default;
       
       const opt = {
-        margin:       [0.5, 0.5, 0.5, 0.5],
+        margin:       0.5,
         filename:     filename,
         image:        { type: 'jpeg' as 'jpeg', quality: 0.98 },
         html2canvas:  { scale: 2, useCORS: true, logging: false, windowWidth: 1200 },
