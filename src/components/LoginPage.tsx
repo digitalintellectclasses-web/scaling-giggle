@@ -129,6 +129,7 @@ export function LoginPage() {
             <div className="mt-6 pt-6 border-t border-zinc-800 text-center">
               <p className="text-sm text-zinc-400 mb-3">Want to try out the app?</p>
               <button 
+                type="button"
                 onClick={() => setShowGuestForm(true)}
                 className="w-full py-3 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl font-semibold transition-all text-sm"
               >
