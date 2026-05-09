@@ -143,16 +143,16 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     if (currentUser?.id === 'guest') {
       const mockDate = new Date().toISOString().split('T')[0];
       setTransactions([
-        { id: '1', type: 'income', amount: 50000, category: 'Web Development', description: 'Website build for ABC Corp', date: mockDate, managedBy: 'Pratik', paymentMethod: 'online' },
-        { id: '2', type: 'income', amount: 12000, category: 'SEO', description: 'Monthly SEO', date: mockDate, managedBy: 'Pranav', paymentMethod: 'cash' },
-        { id: '3', type: 'expense', amount: 5000, category: 'Software', description: 'Vercel & Firebase', date: mockDate, managedBy: 'Pratik', paymentMethod: 'online' }
+        { id: '1', type: 'income', amount: 50000, category: 'Web Development', description: 'Website build for Tech Corp', date: mockDate, managedBy: 'Partner A', paymentMethod: 'online' },
+        { id: '2', type: 'income', amount: 12000, category: 'SEO', description: 'Monthly SEO', date: mockDate, managedBy: 'Partner B', paymentMethod: 'cash' },
+        { id: '3', type: 'expense', amount: 5000, category: 'Software', description: 'Cloud Services', date: mockDate, managedBy: 'Partner A', paymentMethod: 'online' }
       ]);
       setClients([
-        { id: 'c1', name: 'ABC Corp', email: 'hello@abccorp.com', phone: '9876543210', packageTier: 1, activationDate: mockDate, expiryDate: '2026-12-31', externalCosts: 0 }
+        { id: 'c1', name: 'Tech Corp', email: 'hello@techcorp.com', phone: '9876543210', packageTier: 1, activationDate: mockDate, expiryDate: '2026-12-31', externalCosts: 0 }
       ]);
       setEquities([
-        { id: 'e1', partnerId: 'Pratik', type: 'investment', amount: 100000, date: mockDate },
-        { id: 'e2', partnerId: 'Pranav', type: 'investment', amount: 100000, date: mockDate }
+        { id: 'e1', partnerId: 'Partner A', type: 'investment', amount: 100000, date: mockDate },
+        { id: 'e2', partnerId: 'Partner B', type: 'investment', amount: 100000, date: mockDate }
       ]);
       setSalaryPayments([]);
       loadedRef.current = { tx: true, clients: true, equities: true, salaries: true };

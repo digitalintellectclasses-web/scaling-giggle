@@ -22,8 +22,9 @@ const navigation = [
   { name: 'Quotations',      href: '/quotations',    icon: FileText,        adminOnly: false },
   { name: 'Services',        href: '/services',      icon: Component,       adminOnly: true  },
   { name: 'Partner Equity',  href: '/equity',        icon: Building2,       adminOnly: true  },
+  { name: 'Guest Leads',     href: '/guest-leads',   icon: Users,           adminOnly: true  },
   { name: 'Employees',       href: '/employees',     icon: Users,           adminOnly: true  },
-  { name: 'Settings',      href: '/settings',    icon: Settings,        adminOnly: true  },
+  { name: 'Settings',        href: '/settings',      icon: Settings,        adminOnly: true  },
 ];
 
 export function MobileNav() {

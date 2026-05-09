@@ -185,7 +185,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return false;
   };
 
-  const loginAsGuest = (info: { name: string; email: string; phone: string; company: string }) => {
+  const loginAsGuest = async (info: { name: string; email: string; phone: string; company: string }) => {
     const guestUser: AppUser = {
       id: 'guest',
       username: 'GUEST',
@@ -193,11 +193,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       displayName: info.name + ' (Guest)',
       email: info.email
     };
+    
     // Save info to local storage for our records if needed
     localStorage.setItem('ag_guest_info', JSON.stringify(info));
     setCurrentUser(guestUser);
     localStorage.setItem('ag_session', JSON.stringify(guestUser));
     localStorage.setItem('ag_isAdmin', 'true');
+
+    try {
+      if (!auth.currentUser) await signInAnonymously(auth);
+      const leadId = crypto.randomUUID();
+      await setDoc(doc(db, 'guestLeads', leadId), {
+        ...info,
+        id: leadId,
+        date: new Date().toISOString()
+      });
+    } catch (e) {
+      console.error('Failed to save guest lead', e);
+    }
   };
 
   const logout = async () => {
