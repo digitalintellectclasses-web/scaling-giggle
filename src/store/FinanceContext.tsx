@@ -140,6 +140,27 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       }
     }, 3000);
 
+    if (currentUser?.id === 'guest') {
+      const mockDate = new Date().toISOString().split('T')[0];
+      setTransactions([
+        { id: '1', type: 'income', amount: 50000, category: 'Web Development', description: 'Website build for ABC Corp', date: mockDate, managedBy: 'Pratik', paymentMethod: 'online' },
+        { id: '2', type: 'income', amount: 12000, category: 'SEO', description: 'Monthly SEO', date: mockDate, managedBy: 'Pranav', paymentMethod: 'cash' },
+        { id: '3', type: 'expense', amount: 5000, category: 'Software', description: 'Vercel & Firebase', date: mockDate, managedBy: 'Pratik', paymentMethod: 'online' }
+      ]);
+      setClients([
+        { id: 'c1', name: 'ABC Corp', email: 'hello@abccorp.com', phone: '9876543210', packageTier: 1, activationDate: mockDate, expiryDate: '2026-12-31', externalCosts: 0 }
+      ]);
+      setEquities([
+        { id: 'e1', partnerId: 'Pratik', type: 'investment', amount: 100000, date: mockDate },
+        { id: 'e2', partnerId: 'Pranav', type: 'investment', amount: 100000, date: mockDate }
+      ]);
+      setSalaryPayments([]);
+      loadedRef.current = { tx: true, clients: true, equities: true, salaries: true };
+      checkAllLoaded();
+      unsubRef.current = () => clearTimeout(forceLoadTimeout);
+      return;
+    }
+
 
     const unsubTx = onSnapshot(
       query(collection(db, 'transactions'), orderBy('date', 'desc')),
@@ -285,8 +306,15 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const addTransaction = async (tx: Omit<Transaction, 'id'>) => {
-    if (!auth.currentUser) return;
+    if (!auth.currentUser && currentUser?.id !== 'guest') return;
     const id = crypto.randomUUID();
+
+    if (currentUser?.id === 'guest') {
+      setTransactions(prev => [{ ...tx, id } as Transaction, ...prev]);
+      alert("Guest Mode: Transaction simulated.");
+      return;
+    }
+
     try {
       // Strip undefined values — Firestore rejects them with invalid-argument
       const txData = Object.fromEntries(
@@ -310,6 +338,13 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
   const addClient = async (client: Omit<Client, 'id'>) => {
     const id = crypto.randomUUID();
+    
+    if (currentUser?.id === 'guest') {
+      setClients(prev => [{ ...client, id } as Client, ...prev]);
+      alert("Guest Mode: Client simulated.");
+      return;
+    }
+
     await setDoc(doc(db, 'clients', id), { ...client, id });
     const otherAdmins = users.filter(u => u.role === 'admin' && u.id !== currentUser?.id);
     for (const admin of otherAdmins) {
@@ -324,6 +359,25 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
   const addEquity = async (equity: Omit<PartnerEquity, 'id'>, autoCreateTx: boolean = true) => {
     const id = crypto.randomUUID();
+    
+    if (currentUser?.id === 'guest') {
+      setEquities(prev => [{ ...equity, id } as PartnerEquity, ...prev]);
+      if (autoCreateTx) {
+        setTransactions(prev => [{
+          id: crypto.randomUUID(),
+          type: equity.type === 'investment' ? 'income' : 'expense',
+          amount: equity.amount,
+          category: equity.type === 'investment' ? 'Partner Investment' : 'Partner Drawing',
+          description: `${equity.type === 'investment' ? 'Equity investment' : 'Drawing'} by ${equity.partnerId}`,
+          date: equity.date || new Date().toISOString().split('T')[0],
+          managedBy: equity.partnerId,
+          paymentMethod: 'online',
+        } as Transaction, ...prev]);
+      }
+      alert("Guest Mode: Equity simulated.");
+      return;
+    }
+
     await setDoc(doc(db, 'equities', id), { ...equity, id });
 
     // Auto-create a linked financial transaction so equity appears in financials
@@ -357,6 +411,13 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
   const addSalaryPayment = async (sp: Omit<SalaryPayment, 'id'>) => {
     const id = crypto.randomUUID();
+    
+    if (currentUser?.id === 'guest') {
+      setSalaryPayments(prev => [{ ...sp, id } as SalaryPayment, ...prev]);
+      alert("Guest Mode: Salary simulated.");
+      return;
+    }
+
     await setDoc(doc(db, 'salaries', id), { ...sp, id });
     // Notify the employee
     await addNotification({
@@ -378,10 +439,20 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteSalaryPayment = async (id: string) => {
+    if (currentUser?.id === 'guest') {
+      setSalaryPayments(prev => prev.filter(s => s.id !== id));
+      alert("Guest Mode: Salary deletion simulated.");
+      return;
+    }
     await deleteDoc(doc(db, 'salaries', id));
   };
 
   const deleteTransaction = async (id: string) => {
+    if (currentUser?.id === 'guest') {
+      setTransactions(prev => prev.filter(t => t.id !== id));
+      alert("Guest Mode: Transaction deletion simulated.");
+      return;
+    }
     const tx = transactions.find(t => t.id === id);
     await deleteDoc(doc(db, 'transactions', id));
     if (tx) {
@@ -398,6 +469,11 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteClient = async (id: string) => {
+    if (currentUser?.id === 'guest') {
+      setClients(prev => prev.filter(c => c.id !== id));
+      alert("Guest Mode: Client deletion simulated.");
+      return;
+    }
     await deleteDoc(doc(db, 'clients', id));
   };
 

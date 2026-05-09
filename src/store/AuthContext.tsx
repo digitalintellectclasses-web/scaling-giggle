@@ -69,6 +69,7 @@ type AuthContextType = {
   users: AppUser[];
   currentUser: AppUser | null;
   login: (username: string, password: string) => Promise<boolean>;
+  loginAsGuest: (info: { name: string; email: string; phone: string; company: string }) => void;
   logout: () => Promise<void>;
   createEmployee: (username: string, email: string, password: string, displayName: string) => Promise<void>;
   updatePassword: (newPassword: string) => Promise<void>;
@@ -184,6 +185,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return false;
   };
 
+  const loginAsGuest = (info: { name: string; email: string; phone: string; company: string }) => {
+    const guestUser: AppUser = {
+      id: 'guest',
+      username: 'GUEST',
+      role: 'admin', // Make them admin so they can see dashboard and equity
+      displayName: info.name + ' (Guest)',
+      email: info.email
+    };
+    // Save info to local storage for our records if needed
+    localStorage.setItem('ag_guest_info', JSON.stringify(info));
+    setCurrentUser(guestUser);
+    localStorage.setItem('ag_session', JSON.stringify(guestUser));
+    localStorage.setItem('ag_isAdmin', 'true');
+  };
+
   const logout = async () => {
     setCurrentUser(null);
     localStorage.removeItem('ag_session');
@@ -211,7 +227,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider value={{
-      users, currentUser, login, logout, createEmployee, updatePassword,
+      users, currentUser, login, loginAsGuest, logout, createEmployee, updatePassword,
       isAuthenticated: currentUser !== null,
       isLoaded,
     }}>

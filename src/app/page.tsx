@@ -126,6 +126,8 @@ export default function Dashboard() {
   }, [transactions, dateRange, customStart, customEnd]);
 
   const totalIncome = filteredTransactions.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0);
+  const totalIncomeOnline = filteredTransactions.filter(t => t.type === 'income' && t.paymentMethod === 'online').reduce((acc, t) => acc + t.amount, 0);
+  const totalIncomeCash = filteredTransactions.filter(t => t.type === 'income' && t.paymentMethod === 'cash').reduce((acc, t) => acc + t.amount, 0);
   const totalExpense = filteredTransactions.filter(t => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
   const netProfit = totalIncome - totalExpense;
   const partnerSplit = netProfit > 0 ? netProfit / 2 : 0;
@@ -326,6 +328,10 @@ export default function Dashboard() {
             </div>
             <div>
               <p className="text-3xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-zinc-400 tracking-tight">{formatINR(totalIncome)}</p>
+              <div className="mt-2 flex gap-3 text-[10px] text-zinc-400 font-medium">
+                <span>Online: <span className="text-emerald-400/80">{formatINR(totalIncomeOnline)}</span></span>
+                <span>Cash: <span className="text-emerald-400/80">{formatINR(totalIncomeCash)}</span></span>
+              </div>
             </div>
           </div>
         </motion.div>

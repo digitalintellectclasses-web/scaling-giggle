@@ -40,6 +40,14 @@ export default function EquityLedger() {
     transactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0),
     [transactions]);
 
+  const firmIncomeOnline = useMemo(() =>
+    transactions.filter(t => t.type === 'income' && t.paymentMethod === 'online').reduce((s, t) => s + t.amount, 0),
+    [transactions]);
+
+  const firmIncomeCash = useMemo(() =>
+    transactions.filter(t => t.type === 'income' && t.paymentMethod === 'cash').reduce((s, t) => s + t.amount, 0),
+    [transactions]);
+
   const firmExpenses = useMemo(() =>
     transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0),
     [transactions]);
@@ -194,18 +202,38 @@ export default function EquityLedger() {
 
       {/* Firm Health */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          { label: 'Firm Income', value: firmIncome, color: 'text-emerald-400', icon: <TrendingUp className="w-4 h-4" /> },
-          { label: 'Firm Expenses', value: firmExpenses, color: 'text-red-400', icon: <TrendingDown className="w-4 h-4" /> },
-          { label: 'Net P&L', value: firmNet, color: firmNet >= 0 ? 'text-emerald-400' : 'text-red-400', icon: <Scale className="w-4 h-4" /> },
-          { label: 'Each Partner Share', value: partnerShare, color: partnerShare >= 0 ? 'text-blue-400' : 'text-amber-400', icon: <Landmark className="w-4 h-4" /> },
-        ].map(s => (
-          <div key={s.label} className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-4">
-            <div className="flex items-center gap-2 mb-2 text-zinc-500">{s.icon}<span className="text-xs font-semibold uppercase tracking-wider">{s.label}</span></div>
-            <p className={`text-xl font-black ${s.color}`}>{fmt(Math.abs(s.value))}</p>
-            {s.label === 'Net P&L' && firmNet < 0 && <p className="text-[10px] text-amber-400 mt-1">⚠ Deficit — partners covering the gap</p>}
+        <div className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-4">
+          <div className="flex items-center gap-2 mb-2 text-zinc-500">
+            <TrendingUp className="w-4 h-4" /><span className="text-xs font-semibold uppercase tracking-wider">Firm Income</span>
           </div>
-        ))}
+          <p className="text-xl font-black text-emerald-400">{fmt(Math.abs(firmIncome))}</p>
+          <div className="mt-2 flex gap-3 text-[10px] text-zinc-500">
+            <span>Online: <span className="text-emerald-400/80">{fmt(firmIncomeOnline)}</span></span>
+            <span>Cash: <span className="text-emerald-400/80">{fmt(firmIncomeCash)}</span></span>
+          </div>
+        </div>
+
+        <div className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-4">
+          <div className="flex items-center gap-2 mb-2 text-zinc-500">
+            <TrendingDown className="w-4 h-4" /><span className="text-xs font-semibold uppercase tracking-wider">Firm Expenses</span>
+          </div>
+          <p className="text-xl font-black text-red-400">{fmt(Math.abs(firmExpenses))}</p>
+        </div>
+
+        <div className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-4">
+          <div className="flex items-center gap-2 mb-2 text-zinc-500">
+            <Scale className="w-4 h-4" /><span className="text-xs font-semibold uppercase tracking-wider">Net P&L</span>
+          </div>
+          <p className={`text-xl font-black ${firmNet >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{fmt(Math.abs(firmNet))}</p>
+          {firmNet < 0 && <p className="text-[10px] text-amber-400 mt-1">⚠ Deficit — partners covering the gap</p>}
+        </div>
+
+        <div className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-4">
+          <div className="flex items-center gap-2 mb-2 text-zinc-500">
+            <Landmark className="w-4 h-4" /><span className="text-xs font-semibold uppercase tracking-wider">Each Partner Share</span>
+          </div>
+          <p className={`text-xl font-black ${partnerShare >= 0 ? 'text-blue-400' : 'text-amber-400'}`}>{fmt(Math.abs(partnerShare))}</p>
+        </div>
       </div>
 
       {/* Partner Cards */}

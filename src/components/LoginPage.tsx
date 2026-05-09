@@ -5,12 +5,16 @@ import { useAuth } from '@/store/AuthContext';
 import { Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 
 export function LoginPage() {
-  const { login } = useAuth();
+  const { login, loginAsGuest } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Guest Form State
+  const [showGuestForm, setShowGuestForm] = useState(false);
+  const [guestInfo, setGuestInfo] = useState({ name: '', email: '', phone: '', company: '' });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,6 +29,11 @@ export function LoginPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleGuestSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    loginAsGuest(guestInfo);
   };
 
   return (
@@ -115,7 +124,59 @@ export function LoginPage() {
               )}
             </button>
           </form>
+
+          {!showGuestForm && (
+            <div className="mt-6 pt-6 border-t border-zinc-800 text-center">
+              <p className="text-sm text-zinc-400 mb-3">Want to try out the app?</p>
+              <button 
+                onClick={() => setShowGuestForm(true)}
+                className="w-full py-3 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl font-semibold transition-all text-sm"
+              >
+                Login as Guest
+              </button>
+            </div>
+          )}
         </div>
+
+        {/* Guest Modal */}
+        {showGuestForm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+            <div className="bg-zinc-900 border border-zinc-700 rounded-2xl p-8 w-full max-w-md shadow-2xl animate-in fade-in zoom-in duration-200">
+              <h3 className="text-xl font-bold text-white mb-2">Guest Access</h3>
+              <p className="text-sm text-zinc-400 mb-6">Please provide some basic info to start your test drive with dummy data.</p>
+              
+              <form onSubmit={handleGuestSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-medium text-zinc-400 mb-1">Name</label>
+                  <input required value={guestInfo.name} onChange={e => setGuestInfo({...guestInfo, name: e.target.value})}
+                    className="block w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-white outline-none focus:border-emerald-500 text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-zinc-400 mb-1">Company</label>
+                  <input required value={guestInfo.company} onChange={e => setGuestInfo({...guestInfo, company: e.target.value})}
+                    className="block w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-white outline-none focus:border-emerald-500 text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-zinc-400 mb-1">Email</label>
+                  <input required type="email" value={guestInfo.email} onChange={e => setGuestInfo({...guestInfo, email: e.target.value})}
+                    className="block w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-white outline-none focus:border-emerald-500 text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-zinc-400 mb-1">Phone</label>
+                  <input required type="tel" value={guestInfo.phone} onChange={e => setGuestInfo({...guestInfo, phone: e.target.value})}
+                    className="block w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-white outline-none focus:border-emerald-500 text-sm" />
+                </div>
+                
+                <div className="flex gap-3 pt-4">
+                  <button type="button" onClick={() => setShowGuestForm(false)}
+                    className="flex-1 py-3 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl font-bold text-sm transition-all">Cancel</button>
+                  <button type="submit"
+                    className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold text-sm transition-all">Start Session</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
         <p className="text-center text-zinc-600 text-xs mt-6">
           Access is restricted to authorized personnel only.
