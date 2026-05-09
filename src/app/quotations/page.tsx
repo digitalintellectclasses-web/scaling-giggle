@@ -101,11 +101,12 @@ export default function QuotationsPage() {
       const html2pdf = (await import('html2pdf.js')).default;
       
       const opt = {
-        margin:       0.5,
+        margin:       [0.5, 0.5, 0.5, 0.5],
         filename:     filename,
         image:        { type: 'jpeg' as 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true, logging: false },
-        jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' as 'portrait' }
+        html2canvas:  { scale: 2, useCORS: true, logging: false, windowWidth: 1200 },
+        jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' as 'portrait' },
+        pagebreak:    { mode: ['css', 'legacy'], avoid: ['.pdf-row', '.pdf-footer', '.pdf-totals'] }
       };
       
       // Explicitly wait for save
@@ -407,15 +408,23 @@ export default function QuotationsPage() {
               borderRadius: '12px',
               fontFamily: "'Segoe UI', system-ui, sans-serif",
               position: 'relative',
-              overflow: 'hidden',
+              WebkitPrintColorAdjust: 'exact',
+              printColorAdjust: 'exact',
             }}>
+              {/* PDF page-break rules injected for html2pdf */}
+              <style>{`
+                .pdf-row { page-break-inside: avoid !important; break-inside: avoid !important; }
+                .pdf-totals { page-break-inside: avoid !important; break-inside: avoid !important; }
+                .pdf-footer { page-break-inside: avoid !important; break-inside: avoid !important; }
+                .pdf-header { page-break-inside: avoid !important; break-inside: avoid !important; }
+              `}</style>
 
               {/* Background circuit glow effects */}
               <div style={{ position: 'absolute', top: '-80px', right: '-80px', width: '320px', height: '320px', background: 'radial-gradient(circle, rgba(0,180,216,0.12) 0%, transparent 70%)', pointerEvents: 'none' }} />
               <div style={{ position: 'absolute', bottom: '-60px', left: '-60px', width: '240px', height: '240px', background: 'radial-gradient(circle, rgba(0,119,182,0.10) 0%, transparent 70%)', pointerEvents: 'none' }} />
 
               {/* ── HEADER ── */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '40px' }}>
+              <div className="pdf-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '40px', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
                 {/* Left: Big QUOTATION title */}
                 <div>
                   <h1 style={{ fontSize: '52px', fontWeight: 900, color: '#ffffff', margin: 0, lineHeight: 1, letterSpacing: '-0.02em' }}>QUOTATION</h1>
@@ -482,13 +491,15 @@ export default function QuotationsPage() {
                   </div>
                 ) : (
                   items.map((item, idx) => (
-                    <div key={idx} style={{
+                    <div key={idx} className="pdf-row" style={{
                       display: 'flex',
                       gap: '8px',
                       padding: '16px 20px',
                       alignItems: 'flex-start',
                       borderBottom: idx < items.length - 1 ? '1px solid rgba(0,180,216,0.08)' : 'none',
                       background: idx % 2 === 0 ? 'transparent' : 'rgba(0,180,216,0.03)',
+                      pageBreakInside: 'avoid',
+                      breakInside: 'avoid',
                     }}>
                       <div style={{ flex: '1 1 55%' }}>
                         <p style={{ fontWeight: 700, color: '#ffffff', fontSize: '14px', margin: 0, marginBottom: item.description ? '5px' : 0 }}>{item.serviceName}</p>
@@ -504,7 +515,7 @@ export default function QuotationsPage() {
                 )}
 
                 {/* Totals inside table card */}
-                <div style={{ borderTop: '1px solid rgba(0,180,216,0.2)', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
+                <div className="pdf-totals" style={{ borderTop: '1px solid rgba(0,180,216,0.2)', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', width: '280px' }}>
                     <span style={{ color: '#90e0ef', fontSize: '13px' }}>Subtotal</span>
                     <span style={{ color: '#ffffff', fontWeight: 600, fontSize: '13px' }}>{formatINR(subtotal)}</span>
@@ -522,7 +533,7 @@ export default function QuotationsPage() {
               </div>
 
               {/* ── FOOTER ── */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px', marginTop: '10px' }}>
+              <div className="pdf-footer" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px', marginTop: '10px', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
                 {/* Payment Info */}
                 <div>
                   <div style={{ display: 'inline-block', background: 'linear-gradient(135deg, #00b4d8, #0096c7)', borderRadius: '50px', padding: '7px 18px', fontSize: '11px', fontWeight: 800, color: '#fff', marginBottom: '14px', letterSpacing: '0.05em' }}>
