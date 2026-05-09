@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import { useFinance } from '@/store/FinanceContext';
 import { db } from '@/lib/firebase';
 import { doc, setDoc } from 'firebase/firestore';
-import { Landmark, ArrowUpRight, ArrowDownRight, Calendar, TrendingUp, TrendingDown, Scale, CheckCircle2, X } from 'lucide-react';
+import { Landmark, ArrowUpRight, ArrowDownRight, Calendar, TrendingUp, TrendingDown, Scale, CheckCircle2, X, Info } from 'lucide-react';
 import { format } from 'date-fns';
 
 const fmt = (n: number) =>
@@ -28,6 +28,9 @@ export default function EquityLedger() {
   const [settleNote, setSettleNote] = useState('');
   const [settleDate, setSettleDate] = useState(new Date().toISOString().split('T')[0]);
   const [settleLoading, setSettleLoading] = useState(false);
+
+  // ── Explain modal state ──
+  const [showExplain, setShowExplain] = useState(false);
 
   // ── Ledger tab ──
   const [activeTab, setActiveTab] = useState<Partner>('Pratik');
@@ -175,12 +178,18 @@ export default function EquityLedger() {
           <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Partner Equity</h1>
           <p className="text-zinc-400 text-sm">Fair accounting — firm P&L distributes equally. Partner expenses are counted as contributions.</p>
         </div>
-        {settlementAmount > 0.5 && (
-          <button onClick={() => setShowSettle(true)}
-            className="flex items-center gap-2 px-5 py-2.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 rounded-xl text-sm font-bold transition-all">
-            <Scale className="w-4 h-4" /> Settle Balance
+        <div className="flex items-center gap-3">
+          <button onClick={() => setShowExplain(true)}
+            className="flex items-center gap-2 px-5 py-2.5 bg-blue-500/10 border border-blue-500/30 text-blue-400 hover:bg-blue-500/20 rounded-xl text-sm font-bold transition-all">
+            <Info className="w-4 h-4" /> How it works
           </button>
-        )}
+          {settlementAmount > 0.5 && (
+            <button onClick={() => setShowSettle(true)}
+              className="flex items-center gap-2 px-5 py-2.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 rounded-xl text-sm font-bold transition-all">
+              <Scale className="w-4 h-4" /> Settle Balance
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Firm Health */}
@@ -346,6 +355,90 @@ export default function EquityLedger() {
                 className="flex-1 py-3 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-black rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2">
                 <CheckCircle2 className="w-4 h-4" /> {settleLoading ? 'Recording...' : 'Confirm Settle'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Explain Modal */}
+      {showExplain && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="bg-zinc-900 border border-zinc-700 rounded-2xl p-6 w-full max-w-2xl shadow-2xl animate-in fade-in zoom-in duration-200 overflow-y-auto max-h-[90vh]">
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-3">
+                <div className="bg-blue-500/10 p-2 rounded-lg"><Info className="w-5 h-5 text-blue-400" /></div>
+                <h3 className="text-lg font-bold text-white">How Equity is Calculated</h3>
+              </div>
+              <button onClick={() => setShowExplain(false)} className="text-zinc-500 hover:text-white transition-colors"><X className="w-5 h-5" /></button>
+            </div>
+            
+            <div className="space-y-6 text-sm text-zinc-300">
+              <p>
+                The Partner Equity ledger tracks every partner's net position with the firm, balancing what they put into the business against what they take out. It ensures fairness by equally distributing profits and accounting for personal expenses made on behalf of the firm.
+              </p>
+
+              <div className="space-y-3">
+                <h4 className="text-white font-semibold flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-emerald-400" /> 1. Firm P&L and Profit Share
+                </h4>
+                <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-4">
+                  <p className="mb-2"><span className="text-zinc-400">Firm Income:</span> Total of all transactions marked as 'income'.</p>
+                  <p className="mb-2"><span className="text-zinc-400">Firm Expenses:</span> Total of all transactions marked as 'expense'.</p>
+                  <p className="mb-2"><span className="text-zinc-400">Net P&L:</span> Firm Income - Firm Expenses. ({fmt(firmIncome)} - {fmt(firmExpenses)} = <span className={firmNet >= 0 ? "text-emerald-400" : "text-red-400"}>{fmt(firmNet)}</span>)</p>
+                  <p><span className="text-zinc-400">Partner Share (50%):</span> {fmt(firmNet)} / 2 = <span className="font-bold text-blue-400">{fmt(partnerShare)}</span></p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <h4 className="text-white font-semibold flex items-center gap-2">
+                  <ArrowUpRight className="w-4 h-4 text-emerald-400" /> 2. Total Put In (Partner Contributions)
+                </h4>
+                <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-4">
+                  <p className="mb-2">What a partner has given to the firm. This consists of:</p>
+                  <ul className="list-disc pl-5 space-y-1 text-zinc-400">
+                    <li><strong className="text-zinc-300">Manual Investments:</strong> Direct cash injections into the firm.</li>
+                    <li><strong className="text-zinc-300">Expenses Managed:</strong> Firm expenses paid out of the partner's own pocket (tracked via "Managed By" in Financials).</li>
+                  </ul>
+                  <p className="mt-2 text-emerald-400 font-semibold">Formula: Manual Investments + Expenses Managed</p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <h4 className="text-white font-semibold flex items-center gap-2">
+                  <ArrowDownRight className="w-4 h-4 text-blue-400" /> 3. Total Gained (Partner Withdrawals & Profits)
+                </h4>
+                <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-4">
+                  <p className="mb-2">What a partner has received from the firm. This consists of:</p>
+                  <ul className="list-disc pl-5 space-y-1 text-zinc-400">
+                    <li><strong className="text-zinc-300">Drawings:</strong> Cash taken out by the partner for personal use.</li>
+                    <li><strong className="text-zinc-300">Profit Share:</strong> The partner's 50% share of the firm's Net P&L (only added if the firm is in profit).</li>
+                  </ul>
+                  <p className="mt-2 text-blue-400 font-semibold">Formula: Drawings + (50% Profit Share if &gt; 0)</p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <h4 className="text-white font-semibold flex items-center gap-2">
+                  <Scale className="w-4 h-4 text-amber-400" /> 4. Net Position & Settlement
+                </h4>
+                <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-4">
+                  <p className="mb-2">The net position determines who owes whom.</p>
+                  <p className="mb-2"><strong className="text-white">Net Position Formula:</strong> <span className="text-emerald-400">Total Put In</span> - <span className="text-blue-400">Total Gained</span></p>
+                  <ul className="list-disc pl-5 space-y-1 text-zinc-400">
+                    <li>If <strong className="text-emerald-400">Positive</strong>: The partner put in more than they gained. The firm owes them money.</li>
+                    <li>If <strong className="text-red-400">Negative</strong>: The partner took out more than they put in. They owe the firm money.</li>
+                  </ul>
+                  <p className="mt-3 pt-3 border-t border-zinc-800">
+                    <strong className="text-white">Settlement:</strong> To balance the books, the partner with the lower Net Position owes half the difference to the partner with the higher Net Position. Currently, the difference is {fmt(Math.abs(statsPratik.netPosition - statsPranav.netPosition))}, so the settlement amount is <strong className="text-amber-400">{fmt(settlementAmount)}</strong>.
+                  </p>
+                </div>
+              </div>
+
+            </div>
+
+            <div className="mt-6">
+              <button onClick={() => setShowExplain(false)}
+                className="w-full py-3 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl font-bold text-sm transition-all">Understood</button>
             </div>
           </div>
         </div>
