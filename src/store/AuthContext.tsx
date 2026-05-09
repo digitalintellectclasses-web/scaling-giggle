@@ -79,6 +79,13 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const MOCK_USERS: AppUser[] = [
+  { id: 'usr_guest1', username: 'JOHNDOE', password: '123', role: 'admin', displayName: 'John Doe' },
+  { id: 'usr_guest2', username: 'JANESMITH', password: '123', role: 'admin', displayName: 'Jane Smith' },
+  { id: 'usr_guest3', username: 'ALEX', password: '123', role: 'employee', displayName: 'Alex Worker' },
+  { id: 'usr_guest4', username: 'SARAH', password: '123', role: 'employee', displayName: 'Sarah Designer' },
+];
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [users, setUsers] = useState<AppUser[]>(SEED_USERS);
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
@@ -240,7 +247,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider value={{
-      users, currentUser, login, loginAsGuest, logout, createEmployee, updatePassword,
+      users: currentUser?.id === 'guest' ? MOCK_USERS : users,
+      currentUser, login, loginAsGuest, logout, createEmployee, updatePassword,
       isAuthenticated: currentUser !== null,
       isLoaded,
     }}>

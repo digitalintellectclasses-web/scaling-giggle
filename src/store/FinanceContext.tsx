@@ -30,7 +30,7 @@ export type Transaction = {
   category: string;
   description: string;
   date: string;
-  managedBy: 'Pratik' | 'Pranav';
+  managedBy: string;
   paymentMethod: 'cash' | 'online';
   clientId?: string;
   partner?: string;
@@ -49,7 +49,7 @@ export type Client = {
 
 export type PartnerEquity = {
   id: string;
-  partnerId: 'Pratik' | 'Pranav';
+  partnerId: string;
   type: 'investment' | 'drawing';
   amount: number;
   date: string;
@@ -62,7 +62,7 @@ export type SalaryPayment = {
   amount: number;
   month: string;
   date: string;
-  paidBy: 'Pratik' | 'Pranav';
+  paidBy: string;
   paymentMethod: 'cash' | 'online';
   note: string;
 };
@@ -143,16 +143,16 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     if (currentUser?.id === 'guest') {
       const mockDate = new Date().toISOString().split('T')[0];
       setTransactions([
-        { id: '1', type: 'income', amount: 50000, category: 'Web Development', description: 'Website build for Tech Corp', date: mockDate, managedBy: 'Partner A', paymentMethod: 'online' },
-        { id: '2', type: 'income', amount: 12000, category: 'SEO', description: 'Monthly SEO', date: mockDate, managedBy: 'Partner B', paymentMethod: 'cash' },
-        { id: '3', type: 'expense', amount: 5000, category: 'Software', description: 'Cloud Services', date: mockDate, managedBy: 'Partner A', paymentMethod: 'online' }
+        { id: '1', type: 'income', amount: 50000, category: 'Web Development', description: 'Website build for Tech Corp', date: mockDate, managedBy: 'John Doe', paymentMethod: 'online' },
+        { id: '2', type: 'income', amount: 12000, category: 'SEO', description: 'Monthly SEO', date: mockDate, managedBy: 'Jane Smith', paymentMethod: 'cash' },
+        { id: '3', type: 'expense', amount: 5000, category: 'Software', description: 'Cloud Services', date: mockDate, managedBy: 'John Doe', paymentMethod: 'online' }
       ]);
       setClients([
         { id: 'c1', name: 'Tech Corp', email: 'hello@techcorp.com', phone: '9876543210', packageTier: 1, activationDate: mockDate, expiryDate: '2026-12-31', externalCosts: 0 }
       ]);
       setEquities([
-        { id: 'e1', partnerId: 'Partner A', type: 'investment', amount: 100000, date: mockDate },
-        { id: 'e2', partnerId: 'Partner B', type: 'investment', amount: 100000, date: mockDate }
+        { id: 'e1', partnerId: 'John Doe', type: 'investment', amount: 100000, date: mockDate },
+        { id: 'e2', partnerId: 'Jane Smith', type: 'investment', amount: 100000, date: mockDate }
       ]);
       setSalaryPayments([]);
       loadedRef.current = { tx: true, clients: true, equities: true, salaries: true };
@@ -277,7 +277,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         unsubRef.current = null;
       }
     };
-  }, []);
+  }, [currentUser]);
 
   // One-time migration from LocalStorage → Firestore
   useEffect(() => {

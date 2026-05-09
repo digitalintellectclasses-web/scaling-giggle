@@ -37,6 +37,15 @@ export default function ChatPage() {
   useEffect(() => {
     if (!db) return;
 
+    if (currentUser?.id === 'guest') {
+      setMessages([
+        { id: 'm1', text: 'Welcome to the guest demo chat!', senderId: 'usr_guest1', senderName: 'John Doe', timestamp: { toDate: () => new Date() }, isAdmin: true },
+        { id: 'm2', text: 'Feel free to test out the chat functionality. Note: Messages in guest mode are not saved to the server.', senderId: 'usr_guest2', senderName: 'Jane Smith', timestamp: { toDate: () => new Date() }, isAdmin: true }
+      ]);
+      setIsLoading(false);
+      return;
+    }
+
     const q = query(
       collection(db, 'group_messages'),
       orderBy('timestamp', 'asc'),
@@ -68,6 +77,21 @@ export default function ChatPage() {
 
     const msgText = newMessage.trim();
     setNewMessage('');
+
+    if (currentUser.id === 'guest') {
+      setMessages(prev => [...prev, {
+        id: crypto.randomUUID(),
+        text: msgText,
+        senderId: currentUser.id,
+        senderName: currentUser.displayName,
+        isAdmin: true,
+        timestamp: { toDate: () => new Date() }
+      }]);
+      setTimeout(() => {
+        if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      }, 100);
+      return;
+    }
 
     try {
       await addDoc(collection(db, 'group_messages'), {

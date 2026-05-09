@@ -53,8 +53,39 @@ export function WorkProvider({ children }: { children: React.ReactNode }) {
   const [tasks, setTasks] = useState<Task[]>([]);
 
   useEffect(() => {
-    // Both admins and employees see tasks, but filtered differently in UI
-    // Here we fetch all tasks the user is involved in (assigned to or created by)
+    if (!currentUser) return;
+
+    if (currentUser.id === 'guest') {
+      const mockNow = Timestamp.now();
+      setTasks([
+        {
+          id: 'mock_task_1',
+          title: 'Logo Design for Tech Corp',
+          description: 'Create 3 variations of the primary logo.',
+          assignedTo: 'usr_guest4',
+          assignedToName: 'Sarah Designer',
+          createdBy: 'guest',
+          createdByName: 'John Doe',
+          status: 'pending',
+          createdAt: mockNow,
+          history: [{ status: 'pending', timestamp: mockNow, note: 'Task assigned.' }]
+        },
+        {
+          id: 'mock_task_2',
+          title: 'SEO Audit',
+          description: 'Complete the monthly technical SEO audit.',
+          assignedTo: 'usr_guest3',
+          assignedToName: 'Alex Worker',
+          createdBy: 'guest',
+          createdByName: 'Jane Smith',
+          status: 'completed',
+          createdAt: mockNow,
+          history: [{ status: 'completed', timestamp: mockNow, note: 'Task completed.' }]
+        }
+      ]);
+      return;
+    }
+
     const q = query(collection(db, 'tasks'), orderBy('createdAt', 'desc'));
 
     const unsub = onSnapshot(q, (snapshot) => {
@@ -70,6 +101,19 @@ export function WorkProvider({ children }: { children: React.ReactNode }) {
       timestamp: Timestamp.now(),
       note: 'Task assigned.'
     };
+
+    if (currentUser?.id === 'guest') {
+      const id = crypto.randomUUID();
+      setTasks(prev => [{
+        ...taskData,
+        id,
+        status: 'pending',
+        createdAt: Timestamp.now(),
+        history: [historyItem]
+      } as Task, ...prev]);
+      alert('Guest Mode: Task assigned.');
+      return;
+    }
 
     const docRef = await addDoc(collection(db, 'tasks'), {
       ...taskData,
@@ -93,6 +137,12 @@ export function WorkProvider({ children }: { children: React.ReactNode }) {
       timestamp: Timestamp.now(),
       note: note || `Status updated to ${status}.`
     };
+
+    if (currentUser?.id === 'guest') {
+      setTasks(prev => prev.map(t => t.id === id ? { ...t, status, history: [...t.history, historyItem] } : t));
+      alert(`Guest Mode: Task updated to ${status}.`);
+      return;
+    }
 
     await updateDoc(doc(db, 'tasks', id), {
       status,
@@ -143,6 +193,12 @@ export function WorkProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteTask = async (id: string) => {
+    if (currentUser?.id === 'guest') {
+      setTasks(prev => prev.filter(t => t.id !== id));
+      alert('Guest Mode: Task deleted.');
+      return;
+    }
+
     const task = tasks.find(t => t.id === id);
     await deleteDoc(doc(db, 'tasks', id));
     if (task && currentUser) {

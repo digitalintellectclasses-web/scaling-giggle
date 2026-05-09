@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useFinance } from '@/store/FinanceContext';
+import { useAuth } from '@/store/AuthContext';
 import { Plus, Trash2, IndianRupee, Wallet, Users, AlertCircle, X } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 
@@ -11,6 +12,8 @@ const formatINR = (amount: number) => {
 
 export default function FinancialTracking() {
   const { transactions, clients, addTransaction, addClient, deleteTransaction, isAdmin, isLoaded } = useFinance();
+  const { currentUser } = useAuth();
+  const PARTNERS = currentUser?.id === 'guest' ? ['John Doe', 'Jane Smith'] : ['Pratik', 'Pranav'];
   
   const [type, setType] = useState<'income' | 'expense'>('income');
   const [amount, setAmount] = useState('');
@@ -27,7 +30,7 @@ export default function FinancialTracking() {
   }, []);
   
   // New Admin Fields
-  const [managedBy, setManagedBy] = useState<'Pratik' | 'Pranav'>('Pratik');
+  const [managedBy, setManagedBy] = useState(PARTNERS[0]);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'online'>('online');
   const [clientId, setClientId] = useState<string>('');
 
@@ -231,8 +234,7 @@ export default function FinancialTracking() {
                   onChange={(e: any) => setManagedBy(e.target.value)}
                   className="block w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
                 >
-                  <option value="Pratik">Pratik</option>
-                  <option value="Pranav">Pranav</option>
+                  {PARTNERS.map(p => <option key={p} value={p}>{p}</option>)}
                 </select>
               </div>
               <div>

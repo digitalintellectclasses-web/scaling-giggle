@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useFinance } from '@/store/FinanceContext';
+import { useAuth } from '@/store/AuthContext';
 import { db } from '@/lib/firebase';
 import { doc, setDoc } from 'firebase/firestore';
 import { Landmark, ArrowUpRight, ArrowDownRight, Calendar, TrendingUp, TrendingDown, Scale, CheckCircle2, X, Info } from 'lucide-react';
@@ -10,14 +11,13 @@ import { format } from 'date-fns';
 const fmt = (n: number) =>
   new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n);
 
-const PARTNERS = ['Pratik', 'Pranav'] as const;
-type Partner = typeof PARTNERS[number];
-
 export default function EquityLedger() {
   const { equities, transactions, addEquity, isAdmin, isLoaded } = useFinance();
+  const { currentUser } = useAuth();
+  const PARTNERS = currentUser?.id === 'guest' ? ['John Doe', 'Jane Smith'] : ['Pratik', 'Pranav'];
 
   // ── Form state ──
-  const [partnerId, setPartnerId] = useState<Partner>('Pratik');
+  const [partnerId, setPartnerId] = useState(PARTNERS[0]);
   const [type, setType] = useState<'investment' | 'drawing'>('investment');
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -33,7 +33,7 @@ export default function EquityLedger() {
   const [showExplain, setShowExplain] = useState(false);
 
   // ── Ledger tab ──
-  const [activeTab, setActiveTab] = useState<Partner>('Pratik');
+  const [activeTab, setActiveTab] = useState(PARTNERS[0]);
 
   // ── Core financials ──
   const firmIncome = useMemo(() =>
@@ -56,7 +56,7 @@ export default function EquityLedger() {
   const partnerShare = firmNet / 2; // each partner's 50% of firm P&L
 
   // ── Per-partner equity stats ──
-  const getStats = (pid: Partner) => {
+  const getStats = (pid: string) => {
     const invested = equities
       .filter(e => e.partnerId === pid && e.type === 'investment')
       .reduce((s, e) => s + e.amount, 0);
@@ -80,14 +80,14 @@ export default function EquityLedger() {
     return { invested, drawn, managed, totalIn, totalGain, netPosition };
   };
 
-  const statsPratik = getStats('Pratik');
-  const statsPranav = getStats('Pranav');
+  const statsPartner1 = getStats(PARTNERS[0]);
+  const statsPartner2 = getStats(PARTNERS[1]);
 
   // Settlement: difference between partners' net positions
   // If Pratik's netPosition > Pranav's, Pranav owes Pratik half the difference
-  const settlementAmount = Math.abs(statsPratik.netPosition - statsPranav.netPosition) / 2;
-  const creditor: Partner = statsPratik.netPosition > statsPranav.netPosition ? 'Pratik' : 'Pranav';
-  const debtor: Partner = creditor === 'Pratik' ? 'Pranav' : 'Pratik';
+  const settlementAmount = Math.abs(statsPartner1.netPosition - statsPartner2.netPosition) / 2;
+  const creditor = statsPartner1.netPosition > statsPartner2.netPosition ? PARTNERS[0] : PARTNERS[1];
+  const debtor = creditor === PARTNERS[0] ? PARTNERS[1] : PARTNERS[0];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -137,7 +137,7 @@ export default function EquityLedger() {
     );
   }
 
-  const renderPartnerCard = (pid: Partner, stats: ReturnType<typeof getStats>, accent: string) => (
+  const renderPartnerCard = (pid: string, stats: ReturnType<typeof getStats>, accent: string) => (
     <div className={`bg-zinc-900/40 border border-zinc-800 rounded-2xl p-6 space-y-4`}>
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-bold text-white">{pid}</h2>
@@ -238,8 +238,8 @@ export default function EquityLedger() {
 
       {/* Partner Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {renderPartnerCard('Pratik', statsPratik, 'emerald')}
-        {renderPartnerCard('Pranav', statsPranav, 'blue')}
+        {renderPartnerCard(PARTNERS[0], statsPartner1, 'emerald')}
+        {renderPartnerCard(PARTNERS[1], statsPartner2, 'blue')}
       </div>
 
       {/* Bottom: Form + Ledger */}
@@ -347,10 +347,10 @@ export default function EquityLedger() {
 
             <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-4 mb-5 space-y-2 text-sm">
               <div className="flex justify-between text-zinc-400">
-                <span>Pratik net position</span><span className={statsPratik.netPosition >= 0 ? 'text-emerald-400' : 'text-red-400'}>{fmt(statsPratik.netPosition)}</span>
+                <span>{PARTNERS[0]} net position</span><span className={statsPartner1.netPosition >= 0 ? 'text-emerald-400' : 'text-red-400'}>{fmt(statsPartner1.netPosition)}</span>
               </div>
               <div className="flex justify-between text-zinc-400">
-                <span>Pranav net position</span><span className={statsPranav.netPosition >= 0 ? 'text-emerald-400' : 'text-red-400'}>{fmt(statsPranav.netPosition)}</span>
+                <span>{PARTNERS[1]} net position</span><span className={statsPartner2.netPosition >= 0 ? 'text-emerald-400' : 'text-red-400'}>{fmt(statsPartner2.netPosition)}</span>
               </div>
               <div className="border-t border-zinc-800 pt-2 mt-2 flex justify-between font-bold">
                 <span className="text-amber-300">Settlement needed</span>
@@ -457,7 +457,7 @@ export default function EquityLedger() {
                     <li>If <strong className="text-red-400">Negative</strong>: The partner took out more than they put in. They owe the firm money.</li>
                   </ul>
                   <p className="mt-3 pt-3 border-t border-zinc-800">
-                    <strong className="text-white">Settlement:</strong> To balance the books, the partner with the lower Net Position owes half the difference to the partner with the higher Net Position. Currently, the difference is {fmt(Math.abs(statsPratik.netPosition - statsPranav.netPosition))}, so the settlement amount is <strong className="text-amber-400">{fmt(settlementAmount)}</strong>.
+                    <strong className="text-white">Settlement:</strong> To balance the books, the partner with the lower Net Position owes half the difference to the partner with the higher Net Position. Currently, the difference is {fmt(Math.abs(statsPartner1.netPosition - statsPartner2.netPosition))}, so the settlement amount is <strong className="text-amber-400">{fmt(settlementAmount)}</strong>.
                   </p>
                 </div>
               </div>

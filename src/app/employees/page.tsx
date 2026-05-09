@@ -20,7 +20,7 @@ function generateEmpId(displayName: string): string {
 }
 
 export default function EmployeesPage() {
-  const { users, createEmployee, isLoaded: authLoaded } = useAuth();
+  const { users, currentUser, createEmployee, isLoaded: authLoaded } = useAuth();
   const { salaryPayments, addSalaryPayment, deleteSalaryPayment, isLoaded: finLoaded, isAdmin } = useFinance();
 
   // ── Create Employee form ──
@@ -62,8 +62,9 @@ export default function EmployeesPage() {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
+  const PARTNERS = currentUser?.id === 'guest' ? ['John Doe', 'Jane Smith'] : ['Pratik', 'Pranav'];
   const [salDate, setSalDate] = useState('');
-  const [salPaidBy, setSalPaidBy] = useState<'Pratik' | 'Pranav'>('Pratik');
+  const [salPaidBy, setSalPaidBy] = useState(PARTNERS[0]);
   const [salMethod, setSalMethod] = useState<'cash' | 'online'>('online');
   const [salNote, setSalNote] = useState('');
 
@@ -87,7 +88,7 @@ export default function EmployeesPage() {
       amount: Number(salAmount),
       month: salMonth,
       date: salDate,
-      paidBy: salPaidBy,
+      paidBy: salPaidBy as any,
       paymentMethod: salMethod,
       note: salNote,
     });
@@ -293,8 +294,7 @@ export default function EmployeesPage() {
                 <label className="block text-xs font-medium text-zinc-400 mb-1">Paid By</label>
                 <select value={salPaidBy} onChange={(e: any) => setSalPaidBy(e.target.value)}
                   className="block w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-white text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all">
-                  <option value="Pratik">Pratik</option>
-                  <option value="Pranav">Pranav</option>
+                  {PARTNERS.map(p => <option key={p} value={p}>{p}</option>)}
                 </select>
               </div>
               <div>

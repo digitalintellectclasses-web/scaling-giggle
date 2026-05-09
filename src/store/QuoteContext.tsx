@@ -84,6 +84,18 @@ export function QuoteProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!currentUser) return;
 
+    if (currentUser.id === 'guest') {
+      setServices([
+        { id: 's1', name: 'Web Development', description: 'Custom website build', rate: 50000, unit: 'project' },
+        { id: 's2', name: 'SEO Retainer', description: 'Monthly SEO optimization', rate: 12000, unit: 'month' }
+      ]);
+      setQuotations([
+        { id: 'q1', clientId: 'c1', clientName: 'Tech Corp', createdBy: 'guest', createdByName: 'Guest', date: new Date().toISOString(), expiryDate: new Date(Date.now() + 15*86400000).toISOString(), items: [{ serviceId: 's1', serviceName: 'Web Development', description: 'Custom website build', quantity: 1, rate: 50000, amount: 50000 }], subtotal: 50000, tax: 9000, total: 59000, status: 'sent', paymentStatus: 'unpaid', amountPaid: 0 }
+      ]);
+      setPdfConfig(DEFAULT_PDF_CONFIG);
+      return;
+    }
+
     const unsubServices = onSnapshot(collection(db, 'services'), (snap) => {
       const s = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Service));
       setServices(s);
@@ -109,6 +121,11 @@ export function QuoteProvider({ children }: { children: React.ReactNode }) {
 
   const addService = async (service: Omit<Service, 'id'>) => {
     const id = crypto.randomUUID();
+    if (currentUser?.id === 'guest') {
+      setServices(prev => [{ ...service, id } as Service, ...prev]);
+      alert('Guest Mode: Service added.');
+      return;
+    }
     await setDoc(doc(db, 'services', id), service);
   };
 
@@ -122,6 +139,11 @@ export function QuoteProvider({ children }: { children: React.ReactNode }) {
 
   const addQuotation = async (quotation: Omit<Quotation, 'id'>) => {
     const id = crypto.randomUUID();
+    if (currentUser?.id === 'guest') {
+      setQuotations(prev => [{ ...quotation, id } as Quotation, ...prev]);
+      alert('Guest Mode: Quotation saved.');
+      return;
+    }
     await setDoc(doc(db, 'quotations', id), quotation);
 
     if (currentUser) {
@@ -138,18 +160,34 @@ export function QuoteProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateQuotationStatus = async (id: string, status: Quotation['status']) => {
+    if (currentUser?.id === 'guest') {
+      setQuotations(prev => prev.map(q => q.id === id ? { ...q, status } : q));
+      return;
+    }
     await updateDoc(doc(db, 'quotations', id), { status });
   };
 
   const updateQuotationPayment = async (id: string, updates: { paymentStatus: 'unpaid' | 'partial' | 'paid', amountPaid: number }) => {
+    if (currentUser?.id === 'guest') {
+      setQuotations(prev => prev.map(q => q.id === id ? { ...q, ...updates } : q));
+      return;
+    }
     await updateDoc(doc(db, 'quotations', id), updates);
   };
 
   const deleteQuotation = async (id: string) => {
+    if (currentUser?.id === 'guest') {
+      setQuotations(prev => prev.filter(q => q.id !== id));
+      return;
+    }
     await deleteDoc(doc(db, 'quotations', id));
   };
 
   const updatePdfConfig = async (updates: Partial<PdfConfig>) => {
+    if (currentUser?.id === 'guest') {
+      setPdfConfig(prev => ({ ...prev, ...updates }));
+      return;
+    }
     await setDoc(doc(db, 'config', 'pdf'), updates, { merge: true });
   };
 
