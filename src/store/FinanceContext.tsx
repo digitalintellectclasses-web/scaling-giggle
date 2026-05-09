@@ -33,6 +33,7 @@ export type Transaction = {
   managedBy: 'Pratik' | 'Pranav';
   paymentMethod: 'cash' | 'online';
   clientId?: string;
+  partner?: string;
 };
 
 export type Client = {
