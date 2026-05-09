@@ -318,7 +318,7 @@ export default function AnalyticsPage() {
                 <RechartsTooltip 
                   contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', borderRadius: '12px' }}
                   itemStyle={{ fontSize: '14px', fontWeight: 'bold' }}
-                  formatter={(value: number) => [`₹${value.toLocaleString()}`, '']}
+                  formatter={(value) => [`₹${(value as number).toLocaleString()}`, '']}
                 />
                 <Legend iconType="circle" />
                 <Line type="monotone" name="Income" dataKey="in" stroke="#34d399" strokeWidth={3} dot={{ r: 4, fill: '#34d399', strokeWidth: 0 }} />
@@ -464,7 +464,7 @@ export default function AnalyticsPage() {
                         <RechartsTooltip 
                           contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', borderRadius: '12px' }}
                           itemStyle={{ fontSize: '13px', fontWeight: 'bold' }}
-                          formatter={(value: number) => [`₹${value.toLocaleString()}`, '']}
+                          formatter={(value) => [`₹${(value as number).toLocaleString()}`, '']}
                         />
                         <Legend iconType="rect" />
                         <Bar name="Income" dataKey="income" fill="#34d399" radius={[4, 4, 0, 0]} />
@@ -491,7 +491,7 @@ export default function AnalyticsPage() {
                           <RechartsTooltip 
                             contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', borderRadius: '12px' }}
                             itemStyle={{ fontSize: '13px', fontWeight: 'bold' }}
-                            formatter={(value: number) => [`₹${value.toLocaleString()}`, '']}
+                            formatter={(value) => [`₹${(value as number).toLocaleString()}`, '']}
                           />
                         </PieChart>
                       </ResponsiveContainer>
@@ -524,7 +524,7 @@ export default function AnalyticsPage() {
                           <RechartsTooltip 
                             contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', borderRadius: '12px' }}
                             itemStyle={{ fontSize: '13px', fontWeight: 'bold' }}
-                            formatter={(value: number) => [`₹${value.toLocaleString()}`, '']}
+                            formatter={(value) => [`₹${(value as number).toLocaleString()}`, '']}
                           />
                         </PieChart>
                       </ResponsiveContainer>
