@@ -86,11 +86,10 @@ export default function Loading() {
         {/* Progress Bar Container */}
         <div className="mt-12 w-64 h-1.5 bg-zinc-900 rounded-full overflow-hidden border border-zinc-800/50 p-[1px]">
           <motion.div
-            className="h-full rounded-full" style={{ background: 'linear-gradient(90deg, #00b4d8, #0077b6, #00b4d8)' }}
+            className="h-full rounded-full" style={{ background: 'linear-gradient(90deg, #00b4d8, #0077b6, #00b4d8)', width: '100%' }}
             initial={{ x: "-100%" }}
             animate={{ x: "100%" }}
             transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-            style={{ width: '100%' }}
           />
         </div>
       </div>

@@ -39,6 +39,7 @@ export type Transaction = {
 export type Client = {
   id: string;
   name: string;
+  email?: string;
   packageTier: number;
   activationDate: string;
   expiryDate: string;
