@@ -17,8 +17,8 @@ const formatINR = (amount: number) => {
 };
 
 export default function Dashboard() {
-  const { transactions, equities, isAdmin, isLoaded, requestGlobalReset, activeResetRequest } = useFinance();
-  const { users, createEmployee } = useAuth();
+  const { transactions, equities, isAdmin, isLoaded, requestGlobalReset, activeResetRequest, resetGuestData, guestResetSuccess } = useFinance();
+  const { users, createEmployee, currentUser } = useAuth();
   const router = useRouter();
 
   const containerVariants = {
@@ -33,6 +33,7 @@ export default function Dashboard() {
 
   const [showResetModal, setShowResetModal] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+  const [showGuestResetModal, setShowGuestResetModal] = useState(false);
 
   const handleRequestReset = async () => {
     setShowResetModal(true);
@@ -234,7 +235,7 @@ export default function Dashboard() {
       variants={containerVariants}
       className="space-y-6 pb-20"
     >
-      {/* Reset Confirmation Modal */}
+      {/* Global Reset Confirmation Modal */}
       {showResetModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
           <div className="bg-zinc-950 border border-red-500/30 rounded-2xl p-6 sm:p-8 max-w-md w-full shadow-[0_0_40px_rgba(239,68,68,0.15)]">
@@ -269,6 +270,49 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* Guest Trial Reset Confirmation Modal */}
+      {showGuestResetModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
+          <div className="bg-zinc-950 border border-amber-500/30 rounded-2xl p-6 sm:p-8 max-w-md w-full shadow-[0_0_40px_rgba(245,158,11,0.15)]">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                <ShieldAlert className="w-6 h-6 text-amber-400" />
+              </div>
+              <div>
+                <h2 className="text-white font-bold text-lg leading-tight">Reset Trial Data?</h2>
+                <p className="text-zinc-400 text-xs sm:text-sm mt-0.5">All current demo entries will be cleared</p>
+              </div>
+            </div>
+            <p className="text-zinc-300 text-sm mb-6 leading-relaxed">
+              This will wipe any transactions, clients, or equity entries you have added and reload the original demo dataset for a fresh trial calculation.
+            </p>
+            <div className="flex gap-3">
+              <button
+                id="guest-reset-confirm-btn"
+                onClick={() => { resetGuestData(); setShowGuestResetModal(false); }}
+                className="flex-1 py-3 bg-amber-600 hover:bg-amber-500 text-white rounded-xl font-bold text-sm transition-all"
+              >
+                Yes, Reset Trial Data
+              </button>
+              <button
+                onClick={() => setShowGuestResetModal(false)}
+                className="flex-1 py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl font-bold text-sm transition-all"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Guest Reset Success Toast */}
+      {guestResetSuccess && (
+        <div className="fixed bottom-6 right-6 z-[200] flex items-center gap-3 bg-emerald-950 border border-emerald-500/40 text-emerald-300 px-5 py-3 rounded-2xl shadow-2xl shadow-emerald-900/40 animate-in slide-in-from-bottom-4">
+          <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0" />
+          <span className="text-sm font-semibold">Trial data reset successfully!</span>
+        </div>
+      )}
+
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Admin Dashboard</h1>
@@ -295,7 +339,7 @@ export default function Dashboard() {
             <option value="lifetime">Lifetime</option>
             <option value="custom">Custom Range</option>
           </select>
-          {isAdmin && (
+          {isAdmin && currentUser?.id !== 'guest' && (
              <button 
                onClick={handleRequestReset}
                disabled={!!activeResetRequest}
@@ -666,6 +710,25 @@ export default function Dashboard() {
             ))}
           </div>
         </div>
+
+        {/* Guest Reset Button */}
+        {currentUser?.id === 'guest' && (
+          <div className="bg-amber-950/20 border border-amber-800/30 rounded-2xl p-6">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h3 className="text-lg font-bold text-amber-400 mb-1">Trial Mode</h3>
+                <p className="text-sm text-zinc-500">This is demo data. Reset anytime for a fresh trial calculation.</p>
+              </div>
+              <button
+                id="guest-reset-btn"
+                onClick={() => setShowGuestResetModal(true)}
+                className="flex-shrink-0 px-5 py-2.5 bg-amber-600 hover:bg-amber-500 text-white text-sm font-semibold rounded-lg transition-all shadow-lg shadow-amber-900/30"
+              >
+                Reset Trial Data
+              </button>
+            </div>
+          </div>
+        )}
 
       </motion.div>
     </motion.div>

@@ -209,10 +209,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     try {
       if (!auth.currentUser) await signInAnonymously(auth);
-      const leadId = crypto.randomUUID();
-      await setDoc(doc(db, 'guestLeads', leadId), {
+      const safeId = typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : Date.now().toString(36) + Math.random().toString(36).substring(2);
+      await setDoc(doc(db, 'guestLeads', safeId), {
         ...info,
-        id: leadId,
+        id: safeId,
         date: new Date().toISOString()
       });
     } catch (e) {

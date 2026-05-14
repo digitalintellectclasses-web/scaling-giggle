@@ -88,6 +88,8 @@ type FinanceContextType = {
   requestTransaction: (tx: Omit<Transaction, 'id'>) => Promise<void>;
   approveTransaction: (requestId: string, notificationId: string) => Promise<void>;
   rejectTransaction: (requestId: string, notificationId: string) => Promise<void>;
+  resetGuestData: () => void;
+  guestResetSuccess: boolean;
   activeResetRequest: any;
 };
 
@@ -104,10 +106,14 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [activeResetRequest, setActiveResetRequest] = useState<any>(null);
   const [transactionRequests, setTransactionRequests] = useState<any[]>([]);
+  const [guestResetSuccess, setGuestResetSuccess] = useState(false);
 
   const loadedRef = useRef({ tx: false, clients: false, equities: false, salaries: false });
   // Track the active Firestore unsub functions so we can restart them if needed
   const unsubRef = useRef<(() => void) | null>(null);
+  // Tracks whether the guest has explicitly reset — prevents startFirestoreListeners
+  // from re-populating mock data after an intentional wipe.
+  const guestResetDoneRef = useRef(false);
 
   const checkAllLoaded = () => {
     const r = loadedRef.current;
@@ -141,20 +147,20 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     }, 3000);
 
     if (currentUser?.id === 'guest') {
-      const mockDate = new Date().toISOString().split('T')[0];
-      setTransactions([
-        { id: '1', type: 'income', amount: 50000, category: 'Web Development', description: 'Website build for Tech Corp', date: mockDate, managedBy: 'John Doe', paymentMethod: 'online' },
-        { id: '2', type: 'income', amount: 12000, category: 'SEO', description: 'Monthly SEO', date: mockDate, managedBy: 'Jane Smith', paymentMethod: 'cash' },
-        { id: '3', type: 'expense', amount: 5000, category: 'Software', description: 'Cloud Services', date: mockDate, managedBy: 'John Doe', paymentMethod: 'online' }
-      ]);
-      setClients([
-        { id: 'c1', name: 'Tech Corp', email: 'hello@techcorp.com', phone: '9876543210', packageTier: 1, activationDate: mockDate, expiryDate: '2026-12-31', externalCosts: 0 }
-      ]);
-      setEquities([
-        { id: 'e1', partnerId: 'John Doe', type: 'investment', amount: 100000, date: mockDate },
-        { id: 'e2', partnerId: 'Jane Smith', type: 'investment', amount: 100000, date: mockDate }
-      ]);
-      setSalaryPayments([]);
+      // Only load demo data on first entry. After an explicit reset we leave arrays empty.
+      if (!guestResetDoneRef.current) {
+        const mockDate = new Date().toISOString().split('T')[0];
+        setTransactions([
+          { id: '1', type: 'income', amount: 50000, category: 'Web Development', description: 'Website build for Tech Corp', date: mockDate, managedBy: 'John Doe', paymentMethod: 'online' },
+          { id: '2', type: 'income', amount: 12000, category: 'SEO', description: 'Monthly SEO', date: mockDate, managedBy: 'Jane Smith', paymentMethod: 'cash' },
+          { id: '3', type: 'expense', amount: 5000, category: 'Software', description: 'Cloud Services', date: mockDate, managedBy: 'John Doe', paymentMethod: 'online' }
+        ]);
+        setClients([
+          { id: 'c1', name: 'Tech Corp', email: 'hello@techcorp.com', phone: '9876543210', packageTier: 1, activationDate: mockDate, expiryDate: '2026-12-31', externalCosts: 0 }
+        ]);
+        setEquities([]);
+        setSalaryPayments([]);
+      }
       loadedRef.current = { tx: true, clients: true, equities: true, salaries: true };
       checkAllLoaded();
       unsubRef.current = () => clearTimeout(forceLoadTimeout);
@@ -250,6 +256,9 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   // Main effect: wait for Firebase Auth, then start Firestore listeners.
   // hasValidAuth tracks whether we've successfully started listeners WITH auth.
   useEffect(() => {
+    // Reset the guest-reset guard whenever the logged-in user changes
+    guestResetDoneRef.current = false;
+
     let hasValidAuth = false;
     let authTimeoutId: ReturnType<typeof setTimeout>;
 
@@ -305,9 +314,15 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     migrate();
   }, []);
 
+  const generateSafeId = () => {
+    return typeof crypto !== 'undefined' && crypto.randomUUID 
+      ? crypto.randomUUID() 
+      : Date.now().toString(36) + Math.random().toString(36).substring(2);
+  };
+
   const addTransaction = async (tx: Omit<Transaction, 'id'>) => {
     if (!auth.currentUser && currentUser?.id !== 'guest') return;
-    const id = crypto.randomUUID();
+    const id = generateSafeId();
 
     if (currentUser?.id === 'guest') {
       setTransactions(prev => [{ ...tx, id } as Transaction, ...prev]);
@@ -337,7 +352,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   };
 
   const addClient = async (client: Omit<Client, 'id'>) => {
-    const id = crypto.randomUUID();
+    const id = generateSafeId();
     
     if (currentUser?.id === 'guest') {
       setClients(prev => [{ ...client, id } as Client, ...prev]);
@@ -358,13 +373,13 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   };
 
   const addEquity = async (equity: Omit<PartnerEquity, 'id'>, autoCreateTx: boolean = true) => {
-    const id = crypto.randomUUID();
+    const id = generateSafeId();
     
     if (currentUser?.id === 'guest') {
       setEquities(prev => [{ ...equity, id } as PartnerEquity, ...prev]);
       if (autoCreateTx) {
         setTransactions(prev => [{
-          id: crypto.randomUUID(),
+          id: generateSafeId(),
           type: equity.type === 'investment' ? 'income' : 'expense',
           amount: equity.amount,
           category: equity.type === 'investment' ? 'Partner Investment' : 'Partner Drawing',
@@ -382,7 +397,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
     // Auto-create a linked financial transaction so equity appears in financials
     if (autoCreateTx) {
-      const txId = crypto.randomUUID();
+      const txId = generateSafeId();
       const txType = equity.type === 'investment' ? 'income' : 'expense';
       const txCategory = equity.type === 'investment' ? 'Partner Investment' : 'Partner Drawing';
       const txDate = equity.date || new Date().toISOString().split('T')[0];
@@ -395,6 +410,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         date: txDate,
         managedBy: equity.partnerId,
         paymentMethod: 'online',
+        partner: equity.partnerId,
       });
     }
 
@@ -410,7 +426,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   };
 
   const addSalaryPayment = async (sp: Omit<SalaryPayment, 'id'>) => {
-    const id = crypto.randomUUID();
+    const id = generateSafeId();
     
     if (currentUser?.id === 'guest') {
       setSalaryPayments(prev => [{ ...sp, id } as SalaryPayment, ...prev]);
@@ -669,13 +685,30 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const resetGuestData = () => {
+    // Mark reset as done so startFirestoreListeners won't re-populate demo data
+    guestResetDoneRef.current = true;
+
+    // Wipe everything to zero — gives a completely blank slate for a fresh
+    // trial calculation. The guest can now enter their own numbers from scratch.
+    setTransactions([]);
+    setClients([]);
+    setEquities([]);
+    setSalaryPayments([]);
+
+    // Signal success via React state — window.alert/confirm are blocked in many
+    // deployed / non-localhost environments and silently fail.
+    setGuestResetSuccess(true);
+    setTimeout(() => setGuestResetSuccess(false), 3000);
+  };
+
   return (
     <FinanceContext.Provider value={{
       transactions, transactionRequests, clients, equities, salaryPayments, isAdmin,
       addTransaction, addClient, addEquity, addSalaryPayment, deleteSalaryPayment,
       deleteTransaction, deleteClient, setIsAdmin, isLoaded,
       requestGlobalReset, acceptResetRequest, activeResetRequest,
-      requestTransaction, approveTransaction, rejectTransaction
+      requestTransaction, approveTransaction, rejectTransaction, resetGuestData, guestResetSuccess
     }}>
       {children}
     </FinanceContext.Provider>

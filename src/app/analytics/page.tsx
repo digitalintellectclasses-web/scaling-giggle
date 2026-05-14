@@ -214,10 +214,10 @@ export default function AnalyticsPage() {
 
     const partnerSplit: Record<string, { in: number, out: number }> = {};
     periodTx.forEach(tx => {
-      if (tx.partner) {
-        if (!partnerSplit[tx.partner]) partnerSplit[tx.partner] = { in: 0, out: 0 };
-        if (tx.type === 'income') partnerSplit[tx.partner].in += tx.amount;
-        else partnerSplit[tx.partner].out += tx.amount;
+      if (tx.managedBy) {
+        if (!partnerSplit[tx.managedBy]) partnerSplit[tx.managedBy] = { in: 0, out: 0 };
+        if (tx.type === 'income') partnerSplit[tx.managedBy].in += tx.amount;
+        else partnerSplit[tx.managedBy].out += tx.amount;
       }
     });
 

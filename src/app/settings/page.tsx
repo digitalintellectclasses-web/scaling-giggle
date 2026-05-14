@@ -543,39 +543,41 @@ export default function SettingsPage() {
       </Section>
 
       {/* ── 6. Danger Zone ──────────────────────────────────────── */}
-      <Section title="Danger Zone" icon={AlertTriangle} defaultOpen={false}>
-        <div className="mt-4 space-y-3">
-          <div className="p-4 bg-red-500/5 border border-red-500/20 rounded-xl">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-sm font-bold text-red-300">Request Full System Reset</p>
-                <p className="text-xs text-zinc-500 mt-1">
-                  Permanently wipes ALL transactions, clients, equities, and salary data.
-                  Requires approval from <strong className="text-zinc-300">all {admins.length} admins</strong>.
-                </p>
+      {currentUser?.id !== 'guest' && (
+        <Section title="Danger Zone" icon={AlertTriangle} defaultOpen={false}>
+          <div className="mt-4 space-y-3">
+            <div className="p-4 bg-red-500/5 border border-red-500/20 rounded-xl">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm font-bold text-red-300">Request Full System Reset</p>
+                  <p className="text-xs text-zinc-500 mt-1">
+                    Permanently wipes ALL transactions, clients, equities, and salary data.
+                    Requires approval from <strong className="text-zinc-300">all {admins.length} admins</strong>.
+                  </p>
+                </div>
+                <button
+                  onClick={async () => {
+                    if (window.confirm('⚠ This will PERMANENTLY DELETE all data. This cannot be undone. Continue?')) {
+                      await requestGlobalReset();
+                    }
+                  }}
+                  className="flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-red-600/20 hover:bg-red-600/30 border border-red-500/30 text-red-400 hover:text-red-300 text-xs font-bold rounded-xl transition-all"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  Request Reset
+                </button>
               </div>
-              <button
-                onClick={async () => {
-                  if (window.confirm('⚠ This will PERMANENTLY DELETE all data. This cannot be undone. Continue?')) {
-                    await requestGlobalReset();
-                  }
-                }}
-                className="flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-red-600/20 hover:bg-red-600/30 border border-red-500/30 text-red-400 hover:text-red-300 text-xs font-bold rounded-xl transition-all"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                Request Reset
-              </button>
+            </div>
+
+            <div className="flex items-center gap-2 p-3 bg-yellow-500/5 border border-yellow-500/20 rounded-xl">
+              <AlertTriangle className="w-4 h-4 text-yellow-400 flex-shrink-0" />
+              <p className="text-xs text-yellow-300/80">
+                All destructive actions are logged and require multi-admin approval. They cannot be reversed.
+              </p>
             </div>
           </div>
-
-          <div className="flex items-center gap-2 p-3 bg-yellow-500/5 border border-yellow-500/20 rounded-xl">
-            <AlertTriangle className="w-4 h-4 text-yellow-400 flex-shrink-0" />
-            <p className="text-xs text-yellow-300/80">
-              All destructive actions are logged and require multi-admin approval. They cannot be reversed.
-            </p>
-          </div>
-        </div>
-      </Section>
+        </Section>
+      )}
 
     </div>
   );

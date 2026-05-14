@@ -62,6 +62,7 @@ export default function FinancialTracking() {
         managedBy,
         paymentMethod,
         clientId: clientId || undefined,
+        partner: managedBy,
       });
     } catch (err) {
       console.error('Failed to add transaction:', err);
