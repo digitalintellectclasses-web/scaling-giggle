@@ -24,7 +24,7 @@ const navigation = [
   { name: 'Quotations',      href: '/quotations',    icon: FileText,        adminOnly: false },
   { name: 'Services',        href: '/services',      icon: Component,       adminOnly: true  },
   { name: 'Partner Equity',  href: '/equity',        icon: Building2,       adminOnly: true  },
-  { name: 'Guest Leads',     href: '/guest-leads',   icon: Users,           adminOnly: true  },
+  { name: 'Guest Leads',     href: '/guest-leads',   icon: Users,           adminOnly: true, guestHidden: true },
   { name: 'Employees',       href: '/employees',     icon: Users,           adminOnly: true  },
   { name: 'Settings',        href: '/settings',      icon: Settings,        adminOnly: true  },
 ];
@@ -41,7 +41,10 @@ export function Sidebar() {
     router.replace('/');
   };
 
-  const filteredNav = navigation.filter(item => !item.adminOnly || isAdmin);
+  const filteredNav = navigation.filter(item => 
+    (!item.adminOnly || isAdmin) && 
+    (!item.guestHidden || currentUser?.id !== 'guest')
+  );
 
   return (
     <div className="flex h-screen w-64 flex-shrink-0 flex-col bg-[#0f0f11] border-r border-[#27272a] shadow-2xl relative z-50">

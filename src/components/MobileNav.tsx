@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { useFinance } from '@/store/FinanceContext';
 import { useNotifications } from '@/store/NotificationContext';
+import { useAuth } from '@/store/AuthContext';
 
 const navigation = [
   { name: 'Dashboard',       href: '/',              icon: LayoutDashboard, adminOnly: true  },
@@ -22,7 +23,7 @@ const navigation = [
   { name: 'Quotations',      href: '/quotations',    icon: FileText,        adminOnly: false },
   { name: 'Services',        href: '/services',      icon: Component,       adminOnly: true  },
   { name: 'Partner Equity',  href: '/equity',        icon: Building2,       adminOnly: true  },
-  { name: 'Guest Leads',     href: '/guest-leads',   icon: Users,           adminOnly: true  },
+  { name: 'Guest Leads',     href: '/guest-leads',   icon: Users,           adminOnly: true, guestHidden: true },
   { name: 'Employees',       href: '/employees',     icon: Users,           adminOnly: true  },
   { name: 'Settings',        href: '/settings',      icon: Settings,        adminOnly: true  },
 ];
@@ -31,8 +32,12 @@ export function MobileNav() {
   const pathname = usePathname();
   const { isAdmin } = useFinance();
   const { unreadCount } = useNotifications();
+  const { currentUser } = useAuth();
 
-  const filteredNav = navigation.filter(item => !item.adminOnly || isAdmin);
+  const filteredNav = navigation.filter(item => 
+    (!item.adminOnly || isAdmin) && 
+    (!item.guestHidden || currentUser?.id !== 'guest')
+  );
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 md:hidden">
