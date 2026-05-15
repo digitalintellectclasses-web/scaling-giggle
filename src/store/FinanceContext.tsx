@@ -115,6 +115,14 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   // from re-populating mock data after an intentional wipe.
   const guestResetDoneRef = useRef(false);
 
+  // Initialize guestResetDoneRef from sessionStorage if available
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const done = sessionStorage.getItem('ag_guest_reset_done') === 'true';
+      guestResetDoneRef.current = done;
+    }
+  }, []);
+
   const checkAllLoaded = () => {
     const r = loadedRef.current;
     if (r.tx && r.clients && r.equities && r.salaries) {
@@ -148,7 +156,9 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
     if (currentUser?.id === 'guest') {
       // Only load demo data on first entry. After an explicit reset we leave arrays empty.
-      if (!guestResetDoneRef.current) {
+      const isReset = typeof window !== 'undefined' && sessionStorage.getItem('ag_guest_reset_done') === 'true';
+      
+      if (!isReset && !guestResetDoneRef.current) {
         const mockDate = new Date().toISOString().split('T')[0];
         setTransactions([
           { id: '1', type: 'income', amount: 50000, category: 'Web Development', description: 'Website build for Tech Corp', date: mockDate, managedBy: 'John Doe', paymentMethod: 'online' },
@@ -326,7 +336,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
     if (currentUser?.id === 'guest') {
       setTransactions(prev => [{ ...tx, id } as Transaction, ...prev]);
-      alert("Guest Mode: Transaction simulated.");
+      console.log("Guest Mode: Transaction simulated.");
       return;
     }
 
@@ -356,7 +366,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     
     if (currentUser?.id === 'guest') {
       setClients(prev => [{ ...client, id } as Client, ...prev]);
-      alert("Guest Mode: Client simulated.");
+      console.log("Guest Mode: Client simulated.");
       return;
     }
 
@@ -389,7 +399,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
           paymentMethod: 'online',
         } as Transaction, ...prev]);
       }
-      alert("Guest Mode: Equity simulated.");
+      console.log("Guest Mode: Equity simulated.");
       return;
     }
 
@@ -430,7 +440,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     
     if (currentUser?.id === 'guest') {
       setSalaryPayments(prev => [{ ...sp, id } as SalaryPayment, ...prev]);
-      alert("Guest Mode: Salary simulated.");
+      console.log("Guest Mode: Salary simulated.");
       return;
     }
 
@@ -457,7 +467,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const deleteSalaryPayment = async (id: string) => {
     if (currentUser?.id === 'guest') {
       setSalaryPayments(prev => prev.filter(s => s.id !== id));
-      alert("Guest Mode: Salary deletion simulated.");
+      console.log("Guest Mode: Salary deletion simulated.");
       return;
     }
     await deleteDoc(doc(db, 'salaries', id));
@@ -466,7 +476,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const deleteTransaction = async (id: string) => {
     if (currentUser?.id === 'guest') {
       setTransactions(prev => prev.filter(t => t.id !== id));
-      alert("Guest Mode: Transaction deletion simulated.");
+      console.log("Guest Mode: Transaction deletion simulated.");
       return;
     }
     const tx = transactions.find(t => t.id === id);
@@ -487,7 +497,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const deleteClient = async (id: string) => {
     if (currentUser?.id === 'guest') {
       setClients(prev => prev.filter(c => c.id !== id));
-      alert("Guest Mode: Client deletion simulated.");
+      console.log("Guest Mode: Client deletion simulated.");
       return;
     }
     await deleteDoc(doc(db, 'clients', id));
@@ -688,6 +698,9 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const resetGuestData = () => {
     // Mark reset as done so startFirestoreListeners won't re-populate demo data
     guestResetDoneRef.current = true;
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('ag_guest_reset_done', 'true');
+    }
 
     // Wipe everything to zero — gives a completely blank slate for a fresh
     // trial calculation. The guest can now enter their own numbers from scratch.

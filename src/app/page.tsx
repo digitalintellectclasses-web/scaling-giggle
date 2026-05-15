@@ -172,18 +172,9 @@ export default function Dashboard() {
 
     const data = Object.values(dataMap).sort((a, b) => a.key.localeCompare(b.key));
 
-    // Pad if not enough points so chart doesn't collapse
-    if (data.length === 0) {
-      data.push({ displayKey: 'N/A', Income: 0, Expenses: 0, Net: 0 });
-      data.push({ displayKey: 'N/A ', Income: 0, Expenses: 0, Net: 0 });
-    } else if (data.length === 1) {
-      const baseInc = data[0].Income || 1000;
-      const baseExp = data[0].Expenses || 500;
-      const baseNet = data[0].Net || 500;
-      data.unshift({ displayKey: 'Start', Income: baseInc * 0.4, Expenses: baseExp * 0.6, Net: baseNet * 0.2 });
-      data.unshift({ displayKey: 'Prev', Income: baseInc * 0.9, Expenses: baseExp * 0.3, Net: baseNet * 1.2 });
-      data.unshift({ displayKey: 'Past', Income: baseInc * 0.2, Expenses: baseExp * 0.8, Net: -baseNet * 0.5 });
-    }
+    // Do not pad with dummy data - the user wants to see accurate trial results.
+    // If empty, return empty array so UI shows "No data".
+    if (data.length === 0) return [];
 
     return data;
   }, [filteredTransactions, dateRange]);
