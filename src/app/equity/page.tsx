@@ -70,14 +70,21 @@ export default function EquityLedger() {
       .filter(t => t.type === 'expense' && t.managedBy === pid)
       .reduce((s, t) => s + t.amount, 0);
 
+    // Income they collected on behalf of the firm
+    const collected = transactions
+      .filter(t => t.type === 'income' && t.managedBy === pid)
+      .reduce((s, t) => s + t.amount, 0);
+
     // Total put in = manual investments + expenses they managed
     const totalIn = invested + managed;
-    // Total gained = drawings + their 50% share of firm profit
-    const totalGain = drawn + (partnerShare > 0 ? partnerShare : 0);
-    // Net position: positive = firm owes them, negative = they owe firm
-    const netPosition = totalIn - totalGain;
+    // Total gained = drawings + income collected
+    const totalGain = drawn + collected;
 
-    return { invested, drawn, managed, totalIn, totalGain, netPosition };
+    // Net position: positive = firm owes them, negative = they owe firm
+    // Formula: (Contributions - Withdrawals) + (50% share of P&L)
+    const netPosition = (totalIn - totalGain) + partnerShare;
+
+    return { invested, drawn, managed, collected, totalIn, totalGain, netPosition };
   };
 
   const statsPartner1 = getStats(PARTNERS[0]);
@@ -156,7 +163,7 @@ export default function EquityLedger() {
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
           <div className="flex items-center gap-1.5 mb-2">
             <ArrowUpRight className="w-4 h-4 text-emerald-400" />
-            <span className="text-xs text-zinc-500 font-semibold uppercase tracking-wide">Total Put In</span>
+            <span className="text-xs text-zinc-500 font-semibold uppercase tracking-wide">Contributions</span>
           </div>
           <p className="text-emerald-400 font-bold text-lg">{fmt(stats.totalIn)}</p>
           <div className="mt-2 space-y-1 text-[10px] text-zinc-600">
@@ -167,13 +174,26 @@ export default function EquityLedger() {
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
           <div className="flex items-center gap-1.5 mb-2">
             <ArrowDownRight className="w-4 h-4 text-blue-400" />
-            <span className="text-xs text-zinc-500 font-semibold uppercase tracking-wide">Total Gained</span>
+            <span className="text-xs text-zinc-500 font-semibold uppercase tracking-wide">Withdrawals</span>
           </div>
           <p className="text-blue-400 font-bold text-lg">{fmt(stats.totalGain)}</p>
           <div className="mt-2 space-y-1 text-[10px] text-zinc-600">
             <div className="flex justify-between"><span>Drawings</span><span>{fmt(stats.drawn)}</span></div>
-            <div className="flex justify-between"><span>50% profit share</span><span>{fmt(Math.max(0, partnerShare))}</span></div>
+            <div className="flex justify-between"><span>Income collected</span><span>{fmt(stats.collected)}</span></div>
           </div>
+        </div>
+      </div>
+      
+      {/* P&L Distribution */}
+      <div className={`p-3 rounded-xl border flex items-center justify-between ${partnerShare >= 0 ? 'bg-blue-500/5 border-blue-500/20' : 'bg-amber-500/5 border-amber-500/20'}`}>
+        <div>
+          <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold">50% P&L Share</p>
+          <p className={`text-sm font-black ${partnerShare >= 0 ? 'text-blue-400' : 'text-amber-400'}`}>
+            {partnerShare >= 0 ? '+' : '-'}{fmt(Math.abs(partnerShare))}
+          </p>
+        </div>
+        <div className={`text-[9px] px-2 py-0.5 rounded font-bold uppercase ${partnerShare >= 0 ? 'bg-blue-500/10 text-blue-400' : 'bg-amber-500/10 text-amber-400'}`}>
+          {partnerShare >= 0 ? 'Profit' : 'Deficit'}
         </div>
       </div>
     </div>
@@ -419,7 +439,7 @@ export default function EquityLedger() {
 
               <div className="space-y-3">
                 <h4 className="text-white font-semibold flex items-center gap-2">
-                  <ArrowUpRight className="w-4 h-4 text-emerald-400" /> 2. Total Put In (Partner Contributions)
+                  <ArrowUpRight className="w-4 h-4 text-emerald-400" /> 2. Partner Contributions
                 </h4>
                 <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-4">
                   <p className="mb-2">What a partner has given to the firm. This consists of:</p>
@@ -433,31 +453,31 @@ export default function EquityLedger() {
 
               <div className="space-y-3">
                 <h4 className="text-white font-semibold flex items-center gap-2">
-                  <ArrowDownRight className="w-4 h-4 text-blue-400" /> 3. Total Gained (Partner Withdrawals & Profits)
+                  <ArrowDownRight className="w-4 h-4 text-blue-400" /> 3. Partner Withdrawals & Collections
                 </h4>
                 <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-4">
-                  <p className="mb-2">What a partner has received from the firm. This consists of:</p>
+                  <p className="mb-2">What a partner has received from or collected for the firm. This consists of:</p>
                   <ul className="list-disc pl-5 space-y-1 text-zinc-400">
                     <li><strong className="text-zinc-300">Drawings:</strong> Cash taken out by the partner for personal use.</li>
-                    <li><strong className="text-zinc-300">Profit Share:</strong> The partner's 50% share of the firm's Net P&L (only added if the firm is in profit).</li>
+                    <li><strong className="text-zinc-300">Income Collected:</strong> Income received by this partner on behalf of the firm (this reduces what the firm owes them).</li>
                   </ul>
-                  <p className="mt-2 text-blue-400 font-semibold">Formula: Drawings + (50% Profit Share if &gt; 0)</p>
+                  <p className="mt-2 text-blue-400 font-semibold">Formula: Drawings + Income Collected</p>
                 </div>
               </div>
 
               <div className="space-y-3">
                 <h4 className="text-white font-semibold flex items-center gap-2">
-                  <Scale className="w-4 h-4 text-amber-400" /> 4. Net Position & Settlement
+                  <Scale className="w-4 h-4 text-amber-400" /> 4. Net Position & Profit/Loss Share
                 </h4>
                 <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-4">
-                  <p className="mb-2">The net position determines who owes whom.</p>
-                  <p className="mb-2"><strong className="text-white">Net Position Formula:</strong> <span className="text-emerald-400">Total Put In</span> - <span className="text-blue-400">Total Gained</span></p>
+                  <p className="mb-2">The net position combines cash flow with the firm's overall performance.</p>
+                  <p className="mb-2"><strong className="text-white">Net Position Formula:</strong> (Contributions - Withdrawals) + <span className="text-blue-400">50% P&L Share</span></p>
                   <ul className="list-disc pl-5 space-y-1 text-zinc-400">
-                    <li>If <strong className="text-emerald-400">Positive</strong>: The partner put in more than they gained. The firm owes them money.</li>
-                    <li>If <strong className="text-red-400">Negative</strong>: The partner took out more than they put in. They owe the firm money.</li>
+                    <li>If the firm is in <strong className="text-emerald-400">Profit</strong>: The 50% share increases the partner's equity.</li>
+                    <li>If the firm is in <strong className="text-red-400">Deficit</strong>: The 50% share decreases the partner's equity.</li>
                   </ul>
                   <p className="mt-3 pt-3 border-t border-zinc-800">
-                    <strong className="text-white">Settlement:</strong> To balance the books, the partner with the lower Net Position owes half the difference to the partner with the higher Net Position. Currently, the difference is {fmt(Math.abs(statsPartner1.netPosition - statsPartner2.netPosition))}, so the settlement amount is <strong className="text-amber-400">{fmt(settlementAmount)}</strong>.
+                    <strong className="text-white">Settlement:</strong> To balance the books, the partner with the lower Net Position owes half the difference to the partner with the higher Net Position.
                   </p>
                 </div>
               </div>
