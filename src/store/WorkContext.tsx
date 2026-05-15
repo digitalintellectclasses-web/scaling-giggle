@@ -43,6 +43,7 @@ type WorkContextType = {
   assignTask: (task: Omit<Task, 'id' | 'createdAt' | 'history' | 'status'>) => Promise<void>;
   updateTaskStatus: (id: string, status: TaskStatus, note?: string) => Promise<void>;
   deleteTask: (id: string) => Promise<void>;
+  resetGuestWorkData: () => void;
 };
 
 const WorkContext = createContext<WorkContextType | undefined>(undefined);
@@ -51,38 +52,50 @@ export function WorkProvider({ children }: { children: React.ReactNode }) {
   const { currentUser, users } = useAuth();
   const { addNotification } = useNotifications();
   const [tasks, setTasks] = useState<Task[]>([]);
+  const guestResetDoneRef = React.useRef(false);
+
+  // Initialize from sessionStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const done = sessionStorage.getItem('ag_guest_reset_done') === 'true';
+      guestResetDoneRef.current = done;
+    }
+  }, []);
 
   useEffect(() => {
     if (!currentUser) return;
 
     if (currentUser.id === 'guest') {
-      const mockNow = Timestamp.now();
-      setTasks([
-        {
-          id: 'mock_task_1',
-          title: 'Logo Design for Tech Corp',
-          description: 'Create 3 variations of the primary logo.',
-          assignedTo: 'usr_guest4',
-          assignedToName: 'Sarah Designer',
-          createdBy: 'guest',
-          createdByName: 'John Doe',
-          status: 'pending',
-          createdAt: mockNow,
-          history: [{ status: 'pending', timestamp: mockNow, note: 'Task assigned.' }]
-        },
-        {
-          id: 'mock_task_2',
-          title: 'SEO Audit',
-          description: 'Complete the monthly technical SEO audit.',
-          assignedTo: 'usr_guest3',
-          assignedToName: 'Alex Worker',
-          createdBy: 'guest',
-          createdByName: 'Jane Smith',
-          status: 'completed',
-          createdAt: mockNow,
-          history: [{ status: 'completed', timestamp: mockNow, note: 'Task completed.' }]
-        }
-      ]);
+      const isReset = typeof window !== 'undefined' && sessionStorage.getItem('ag_guest_reset_done') === 'true';
+      if (!isReset && !guestResetDoneRef.current) {
+        const mockNow = Timestamp.now();
+        setTasks([
+          {
+            id: 'mock_task_1',
+            title: 'Logo Design for Tech Corp',
+            description: 'Create 3 variations of the primary logo.',
+            assignedTo: 'usr_guest4',
+            assignedToName: 'Sarah Designer',
+            createdBy: 'guest',
+            createdByName: 'John Doe',
+            status: 'pending',
+            createdAt: mockNow,
+            history: [{ status: 'pending', timestamp: mockNow, note: 'Task assigned.' }]
+          },
+          {
+            id: 'mock_task_2',
+            title: 'SEO Audit',
+            description: 'Complete the monthly technical SEO audit.',
+            assignedTo: 'usr_guest3',
+            assignedToName: 'Alex Worker',
+            createdBy: 'guest',
+            createdByName: 'Jane Smith',
+            status: 'completed',
+            createdAt: mockNow,
+            history: [{ status: 'completed', timestamp: mockNow, note: 'Task completed.' }]
+          }
+        ]);
+      }
       return;
     }
 
@@ -111,7 +124,7 @@ export function WorkProvider({ children }: { children: React.ReactNode }) {
         createdAt: Timestamp.now(),
         history: [historyItem]
       } as Task, ...prev]);
-      alert('Guest Mode: Task assigned.');
+      console.log('Guest Mode: Task assigned.');
       return;
     }
 
@@ -140,7 +153,7 @@ export function WorkProvider({ children }: { children: React.ReactNode }) {
 
     if (currentUser?.id === 'guest') {
       setTasks(prev => prev.map(t => t.id === id ? { ...t, status, history: [...t.history, historyItem] } : t));
-      alert(`Guest Mode: Task updated to ${status}.`);
+      console.log(`Guest Mode: Task updated to ${status}.`);
       return;
     }
 
@@ -195,7 +208,7 @@ export function WorkProvider({ children }: { children: React.ReactNode }) {
   const deleteTask = async (id: string) => {
     if (currentUser?.id === 'guest') {
       setTasks(prev => prev.filter(t => t.id !== id));
-      alert('Guest Mode: Task deleted.');
+      console.log('Guest Mode: Task deleted.');
       return;
     }
 
@@ -214,8 +227,16 @@ export function WorkProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const resetGuestWorkData = () => {
+    guestResetDoneRef.current = true;
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('ag_guest_reset_done', 'true');
+    }
+    setTasks([]);
+  };
+
   return (
-    <WorkContext.Provider value={{ tasks, assignTask, updateTaskStatus, deleteTask }}>
+    <WorkContext.Provider value={{ tasks, assignTask, updateTaskStatus, deleteTask, resetGuestWorkData }}>
       {children}
     </WorkContext.Provider>
   );

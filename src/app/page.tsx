@@ -64,7 +64,7 @@ export default function Dashboard() {
     }
   };
 
-  const { tasks } = useWork();
+  const { tasks, resetGuestWorkData } = useWork();
 
   // Redirect non-admins to Work Portal
   useEffect(() => {
@@ -280,7 +280,11 @@ export default function Dashboard() {
             <div className="flex gap-3">
               <button
                 id="guest-reset-confirm-btn"
-                onClick={() => { resetGuestData(); setShowGuestResetModal(false); }}
+                onClick={() => { 
+                  resetGuestData(); 
+                  resetGuestWorkData();
+                  setShowGuestResetModal(false); 
+                }}
                 className="flex-1 py-3 bg-amber-600 hover:bg-amber-500 text-white rounded-xl font-bold text-sm transition-all"
               >
                 Yes, Reset Trial Data
