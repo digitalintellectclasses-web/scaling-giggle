@@ -266,6 +266,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   // Main effect: wait for Firebase Auth, then start Firestore listeners.
   // hasValidAuth tracks whether we've successfully started listeners WITH auth.
   useEffect(() => {
+    if (!currentUser) return;
+
     // Reset the guest-reset guard whenever the logged-in user changes
     guestResetDoneRef.current = false;
 

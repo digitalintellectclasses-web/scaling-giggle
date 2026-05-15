@@ -48,10 +48,20 @@ export function Sidebar() {
       {/* Brand */}
       <div className="flex h-16 shrink-0 items-center px-4 border-b border-zinc-800/50">
         <div className="flex items-center gap-2">
-          <img src="/logo.png" alt="Ivory Tech Solutions" className="h-9 w-auto object-contain" />
+          {currentUser?.id === 'guest' ? (
+            <div className="h-9 w-9 rounded-lg bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30">
+              <Activity className="h-5 w-5 text-emerald-500" />
+            </div>
+          ) : (
+            <img src="/logo.png" alt="Ivory Tech Solutions" className="h-9 w-auto object-contain" />
+          )}
           <div className="leading-none">
-            <p className="text-[11px] font-black tracking-tight" style={{ color: '#00b4d8' }}>IVORY TECH</p>
-            <p className="text-[9px] font-semibold text-zinc-500 tracking-widest uppercase">Finance Mgmt</p>
+            <p className="text-[11px] font-black tracking-tight" style={{ color: currentUser?.id === 'guest' ? '#10b981' : '#00b4d8' }}>
+              {currentUser?.id === 'guest' ? 'DIGITAL INTELLECT' : 'IVORY TECH'}
+            </p>
+            <p className="text-[9px] font-semibold text-zinc-500 tracking-widest uppercase">
+              {currentUser?.id === 'guest' ? 'DEMO PORTAL' : 'Finance Mgmt'}
+            </p>
           </div>
         </div>
       </div>
