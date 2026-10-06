@@ -37,19 +37,19 @@ export default function EquityLedger() {
 
   // ── Core financials ──
   const firmIncome = useMemo(() =>
-    transactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0),
+    transactions.filter(t => t.type === 'income' && t.category !== 'Partner Investment').reduce((s, t) => s + t.amount, 0),
     [transactions]);
 
   const firmIncomeOnline = useMemo(() =>
-    transactions.filter(t => t.type === 'income' && t.paymentMethod === 'online').reduce((s, t) => s + t.amount, 0),
+    transactions.filter(t => t.type === 'income' && t.paymentMethod === 'online' && t.category !== 'Partner Investment').reduce((s, t) => s + t.amount, 0),
     [transactions]);
 
   const firmIncomeCash = useMemo(() =>
-    transactions.filter(t => t.type === 'income' && t.paymentMethod === 'cash').reduce((s, t) => s + t.amount, 0),
+    transactions.filter(t => t.type === 'income' && t.paymentMethod === 'cash' && t.category !== 'Partner Investment').reduce((s, t) => s + t.amount, 0),
     [transactions]);
 
   const firmExpenses = useMemo(() =>
-    transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0),
+    transactions.filter(t => t.type === 'expense' && t.category !== 'Partner Drawing').reduce((s, t) => s + t.amount, 0),
     [transactions]);
 
   const firmNet = firmIncome - firmExpenses; // positive = profit, negative = deficit
@@ -67,12 +67,12 @@ export default function EquityLedger() {
 
     // What they actually managed/paid in expenses (their sweat/cash in firm ops)
     const managed = transactions
-      .filter(t => t.type === 'expense' && t.managedBy === pid)
+      .filter(t => t.type === 'expense' && t.managedBy === pid && t.category !== 'Partner Drawing')
       .reduce((s, t) => s + t.amount, 0);
 
     // Income they collected on behalf of the firm
     const collected = transactions
-      .filter(t => t.type === 'income' && t.managedBy === pid)
+      .filter(t => t.type === 'income' && t.managedBy === pid && t.category !== 'Partner Investment')
       .reduce((s, t) => s + t.amount, 0);
 
     // Total put in = manual investments + expenses they managed
@@ -494,3 +494,4 @@ export default function EquityLedger() {
     </div>
   );
 }
+

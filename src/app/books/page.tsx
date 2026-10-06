@@ -37,8 +37,8 @@ export default function BooksPage() {
     return (tm - 1) === m && ty === y;
   });
 
-  const totalIncome = monthlyTransactions.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0);
-  const totalExpense = monthlyTransactions.filter(t => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
+  const totalIncome = monthlyTransactions.filter(t => t.type === 'income' && t.category !== 'Partner Investment').reduce((acc, t) => acc + t.amount, 0);
+  const totalExpense = monthlyTransactions.filter(t => t.type === 'expense' && t.category !== 'Partner Drawing').reduce((acc, t) => acc + t.amount, 0);
   const netProfit = totalIncome - totalExpense;
 
   const handleDownloadPdf = async () => {
@@ -156,3 +156,4 @@ export default function BooksPage() {
     </div>
   );
 }
+

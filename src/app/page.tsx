@@ -129,17 +129,21 @@ export default function Dashboard() {
     return transactions.filter(t => t.date >= startStr && t.date <= endStr);
   }, [transactions, dateRange, customStart, customEnd]);
 
-  const totalIncome = filteredTransactions.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0);
-  const totalIncomeOnline = filteredTransactions.filter(t => t.type === 'income' && t.paymentMethod === 'online').reduce((acc, t) => acc + t.amount, 0);
-  const totalIncomeCash = filteredTransactions.filter(t => t.type === 'income' && t.paymentMethod === 'cash').reduce((acc, t) => acc + t.amount, 0);
-  const totalExpense = filteredTransactions.filter(t => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
+  const operatingTransactions = useMemo(() => {
+    return filteredTransactions.filter(t => t.category !== 'Partner Investment' && t.category !== 'Partner Drawing');
+  }, [filteredTransactions]);
+
+  const totalIncome = operatingTransactions.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0);
+  const totalIncomeOnline = operatingTransactions.filter(t => t.type === 'income' && t.paymentMethod === 'online').reduce((acc, t) => acc + t.amount, 0);
+  const totalIncomeCash = operatingTransactions.filter(t => t.type === 'income' && t.paymentMethod === 'cash').reduce((acc, t) => acc + t.amount, 0);
+  const totalExpense = operatingTransactions.filter(t => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
   const netProfit = totalIncome - totalExpense;
   const partnerSplit = netProfit > 0 ? netProfit / 2 : 0;
 
   // Expense Distribution
   const expenseByCategory = useMemo(() => {
     const categories: Record<string, number> = {};
-    filteredTransactions.filter(t => t.type === 'expense').forEach(t => {
+    operatingTransactions.filter(t => t.type === 'expense').forEach(t => {
       categories[t.category] = (categories[t.category] || 0) + t.amount;
     });
     return Object.entries(categories).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
@@ -152,7 +156,7 @@ export default function Dashboard() {
     const dataMap: Record<string, any> = {};
     const isLongPeriod = dateRange === '1y' || dateRange === 'lifetime';
 
-    filteredTransactions.forEach(t => {
+    operatingTransactions.forEach(t => {
       // If long period, group by YYYY-MM, else group by YYYY-MM-DD
       const key = isLongPeriod ? t.date.substring(0, 7) : t.date;
       

@@ -18,13 +18,17 @@ export default function AnalyticsPage() {
   const { currentUser } = useAuth();
   const { quotations } = useQuote();
 
+  const operatingTransactions = useMemo(() => 
+    transactions.filter(t => t.category !== 'Partner Investment' && t.category !== 'Partner Drawing'),
+  [transactions]);
+
   const [forecastMonths, setForecastMonths] = useState(3);
   const [reportPeriod, setReportPeriod] = useState<'month' | 'quarter' | 'year'>('month');
   const [reportMonth, setReportMonth] = useState(format(new Date(), 'yyyy-MM'));
 
   // ── Cash Flow & Trend Forecast ───────────────────────────────────────────
   const forecastData = useMemo(() => {
-    if (!transactions.length) return [];
+    if (!operatingTransactions.length) return [];
 
     // Group historical by month
     const monthlyData: Record<string, { in: number, out: number }> = {};
@@ -36,7 +40,7 @@ export default function AnalyticsPage() {
       monthlyData[format(d, 'MMM yyyy')] = { in: 0, out: 0 };
     }
 
-    transactions.forEach(tx => {
+    operatingTransactions.forEach(tx => {
       const m = format(parseISO(tx.date), 'MMM yyyy');
       if (monthlyData[m]) {
         if (tx.type === 'income') monthlyData[m].in += tx.amount;
@@ -153,7 +157,7 @@ export default function AnalyticsPage() {
         periodEnd = endOfMonth(selectedDate);
     }
 
-    const periodTx = transactions.filter(tx => {
+    const periodTx = operatingTransactions.filter(tx => {
       const txDate = parseISO(tx.date);
       return txDate >= periodStart && txDate <= periodEnd;
     });
@@ -167,7 +171,7 @@ export default function AnalyticsPage() {
 
     const prevPeriodStart = reportPeriod === 'quarter' ? startOfMonth(subMonths(selectedDate, 3)) : reportPeriod === 'year' ? startOfMonth(subMonths(selectedDate, 12)) : startOfMonth(subMonths(selectedDate, 1));
     const prevPeriodEnd = new Date(periodStart.getTime() - 1);
-    const prevTx = transactions.filter(tx => {
+    const prevTx = operatingTransactions.filter(tx => {
       const txDate = parseISO(tx.date);
       return txDate >= prevPeriodStart && txDate <= prevPeriodEnd;
     });
@@ -614,3 +618,4 @@ export default function AnalyticsPage() {
     </div>
   );
 }
+
